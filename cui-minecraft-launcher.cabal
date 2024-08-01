@@ -1,0 +1,48 @@
+cabal-version: 2.2
+
+name:           cui-minecraft-launcher
+version:        1.0.0.0
+description:    Please see the README on GitHub at <https://github.com/t-sasaki915/cui-minecraft-launcher#readme>
+homepage:       https://github.com/t-sasaki915/cui-minecraft-launcher#readme
+bug-reports:    https://github.com/t-sasaki915/cui-minecraft-launcher/issues
+author:         TSasaki
+maintainer:     netst915@gmail.com
+copyright:      2024 TSasaki
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/t-sasaki915/cui-minecraft-launcher
+
+library
+  exposed-modules:
+  other-modules:
+      Paths_cui_minecraft_launcher
+  autogen-modules:
+      Paths_cui_minecraft_launcher
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+  default-language: Haskell2010
+  default-extensions: LambdaCase
+
+executable cui-minecraft-launcher-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_cui_minecraft_launcher
+  autogen-modules:
+      Paths_cui_minecraft_launcher
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , cui-minecraft-launcher
+  default-language: Haskell2010
+  default-extensions: LambdaCase
