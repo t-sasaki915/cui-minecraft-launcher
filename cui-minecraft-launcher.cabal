@@ -36,6 +36,7 @@ executable cui-minecraft-launcher-exe
   main-is: Main.hs
   other-modules:
       AppOption
+      AppState
       CrossPlatform
       Imports
       Paths_cui_minecraft_launcher

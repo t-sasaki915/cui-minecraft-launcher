@@ -4,9 +4,8 @@ import           CrossPlatform       (getDefaultMinecraftGameDir)
 import           Options.Applicative
 
 newtype AppOption = AppOption
-    { minecraftGameDir :: FilePath
+    { _minecraftGameDir :: FilePath
     }
-    deriving Show
 
 getAppOptionParser :: IO (Parser AppOption)
 getAppOptionParser = do
