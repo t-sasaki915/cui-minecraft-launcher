@@ -4,10 +4,13 @@ import           Imports
 
 import           AppOption
 import           AppState
-import           CrossPlatform       (currentOSType)
+import           CrossPlatform            (currentOSType)
+import           REPL.REPLMain            (replMain)
 
-import           Data.Version        (showVersion)
+import           Data.Version             (showVersion)
 import           Options.Applicative
+import           System.Console.Haskeline (defaultSettings, runInputT)
+import           System.Directory         (createDirectoryIfMissing)
 
 main :: IO ()
 main = do
@@ -20,4 +23,8 @@ main = do
 
     void $ flip runAppStateT (initialAppState appOption) $ do
         minecraftDir <- getAppState <&> (_minecraftGameDir . _appOption)
-        lift $ putStrLn (printf "Using '%s' as the Minecraft game directory." minecraftDir)
+        lift $ do
+            putStrLn (printf "Using '%s' as the Minecraft game directory." minecraftDir)
+            createDirectoryIfMissing True minecraftDir
+
+        runInputT defaultSettings replMain

@@ -35,6 +35,8 @@ library
 executable cui-minecraft-launcher-exe
   main-is: Main.hs
   other-modules:
+      REPL.REPLCommand
+      REPL.REPLMain
       AppOption
       AppState
       CrossPlatform
