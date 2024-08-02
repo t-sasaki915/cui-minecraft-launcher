@@ -1,4 +1,4 @@
-module REPL.Command.HelpCommand (HelpCommand (HelpCommand)) where
+module REPL.Command.HelpCommand (HelpCommand (HelpCommand), commandAndDescriptions) where
 
 import           AppState         (AppStateT, putStrLn')
 import           REPL.REPLCommand (REPLCommand (..))
@@ -15,3 +15,9 @@ instance REPLCommand HelpCommand where
 helpCommandProcedure :: HelpCommand -> AppStateT IO ()
 helpCommandProcedure _ = do
     putStrLn' "HELP"
+
+commandAndDescriptions :: [(String, String)]
+commandAndDescriptions =
+    [ "help" ~> "Show the command reference of this REPL."
+    ]
+    where (~>) a b = (a, b)

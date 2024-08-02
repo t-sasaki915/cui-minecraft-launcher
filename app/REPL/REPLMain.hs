@@ -1,18 +1,18 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module REPL.REPLMain (replMain) where
+module REPL.REPLMain (replMain, replTabCompletion) where
 
 import           Imports
 
-import           AppState                 (AppStateT, getAppState, putAppState,
-                                           runAppStateT)
+import           AppState
 import           CrossPlatform            (currentOSType)
-import           REPL.Command.HelpCommand (HelpCommand (HelpCommand))
+import           REPL.Command.HelpCommand
 import           REPL.REPLCommand         (REPLCommand (..))
 
 import           Control.Exception        (SomeException (..), throw, try)
+import           Data.List                (isPrefixOf)
 import           Data.Version             (showVersion)
-import           System.Console.Haskeline (InputT, getInputLine, outputStrLn)
+import           System.Console.Haskeline
 
 replMain :: InputT (AppStateT IO) ()
 replMain = do
@@ -26,6 +26,13 @@ replMain = do
     outputStrLn ""
 
     repLoop
+
+replTabCompletion :: String -> AppStateT IO [Completion]
+replTabCompletion input =
+    return $
+        map simpleCompletion $
+            filter (input `isPrefixOf`) $
+                map fst commandAndDescriptions
 
 repLoop :: InputT (AppStateT IO) ()
 repLoop = do

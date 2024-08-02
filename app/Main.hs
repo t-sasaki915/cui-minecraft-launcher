@@ -5,11 +5,11 @@ import           Imports
 import           AppOption
 import           AppState
 import           CrossPlatform            (currentOSType)
-import           REPL.REPLMain            (replMain)
+import           REPL.REPLMain            (replMain, replTabCompletion)
 
 import           Data.Version             (showVersion)
 import           Options.Applicative
-import           System.Console.Haskeline (defaultSettings, runInputT)
+import           System.Console.Haskeline
 import           System.Directory         (createDirectoryIfMissing)
 
 main :: IO ()
@@ -27,4 +27,12 @@ main = do
         putStrLn' (printf "Using '%s' as the Minecraft game directory." minecraftDir)
         lift (createDirectoryIfMissing True minecraftDir)
 
-        runInputT defaultSettings replMain
+        let
+            haskelineSettings =
+                Settings
+                    { historyFile    = Nothing
+                    , complete       = completeWord Nothing " \t" replTabCompletion
+                    , autoAddHistory = True
+                    }
+
+        runInputT haskelineSettings replMain
