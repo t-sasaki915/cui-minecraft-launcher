@@ -2,7 +2,7 @@ module REPL.REPLCommand (REPLCommand(..)) where
 
 import           Imports
 
-import           AppState            (AppStateT)
+import           AppState            (AppStateT, putStrLn')
 
 import           Options.Applicative hiding (command)
 
@@ -29,7 +29,7 @@ class REPLCommand a where
 
             Failure err ->
                 let (helpMessage, _, _) = execFailure err commandLabel in
-                    lift (print helpMessage)
+                    putStrLn' (show helpMessage)
 
             CompletionInvoked _ ->
                 return ()

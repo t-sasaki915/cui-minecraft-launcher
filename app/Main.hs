@@ -23,8 +23,8 @@ main = do
 
     void $ flip runAppStateT (initialAppState appOption) $ do
         minecraftDir <- getAppState <&> (_minecraftGameDir . _appOption)
-        lift $ do
-            putStrLn (printf "Using '%s' as the Minecraft game directory." minecraftDir)
-            createDirectoryIfMissing True minecraftDir
+
+        putStrLn' (printf "Using '%s' as the Minecraft game directory." minecraftDir)
+        lift (createDirectoryIfMissing True minecraftDir)
 
         runInputT defaultSettings replMain

@@ -4,8 +4,11 @@ module AppState
     , runAppStateT
     , getAppState
     , putAppState
+    , putStrLn'
     , initialAppState
     ) where
+
+import           Imports
 
 import           AppOption                        (AppOption)
 
@@ -25,6 +28,9 @@ getAppState = get
 
 putAppState :: Monad m => AppState -> AppStateT m ()
 putAppState = put
+
+putStrLn' :: String -> AppStateT IO ()
+putStrLn' = lift . putStrLn
 
 initialAppState :: AppOption -> AppState
 initialAppState appOpt =

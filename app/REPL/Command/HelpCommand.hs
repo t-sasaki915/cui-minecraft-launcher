@@ -1,8 +1,6 @@
 module REPL.Command.HelpCommand (HelpCommand (HelpCommand)) where
 
-import           Imports
-
-import           AppState         (AppStateT)
+import           AppState         (AppStateT, putStrLn')
 import           REPL.REPLCommand (REPLCommand (..))
 
 data HelpCommand = HelpCommand
@@ -16,4 +14,4 @@ instance REPLCommand HelpCommand where
 
 helpCommandProcedure :: HelpCommand -> AppStateT IO ()
 helpCommandProcedure _ = do
-    lift $ putStrLn "HELP"
+    putStrLn' "HELP"
