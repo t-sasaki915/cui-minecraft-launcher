@@ -28,5 +28,6 @@ helpCommandProcedure _ = do
 commandAndDescriptions :: [(String, String)]
 commandAndDescriptions =
     [ "help" ~> "Show the command reference of this REPL."
+    , "exit" ~> "Exit the program."
     ]
     where (~>) a b = (a, b)

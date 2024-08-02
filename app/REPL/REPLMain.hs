@@ -6,6 +6,7 @@ import           Imports
 
 import           AppState
 import           CrossPlatform            (currentOSType)
+import           REPL.Command.ExitCommand
 import           REPL.Command.HelpCommand
 import           REPL.REPLCommand         (REPLCommand (..))
 
@@ -46,6 +47,7 @@ repLoop = do
                     execution =
                         case commandLabel of
                             "help" -> execute HelpCommand
+                            "exit" -> execute ExitCommand
                             _      -> error (printf "Command '%s' is unknown." commandLabel)
 
                 currentAppState <- lift getAppState
