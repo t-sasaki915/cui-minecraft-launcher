@@ -1,10 +1,16 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module REPL.REPLMain (replMain) where
 
 import           Imports
 
-import           AppState                 (AppStateT)
+import           AppState                 (AppStateT, getAppState, putAppState,
+                                           runAppStateT)
 import           CrossPlatform            (currentOSType)
+import           REPL.Command.HelpCommand (HelpCommand (HelpCommand))
+import           REPL.REPLCommand         (REPLCommand (..))
 
+import           Control.Exception        (SomeException (..), throw, try)
 import           Data.Version             (showVersion)
 import           System.Console.Haskeline (InputT, getInputLine, outputStrLn)
 
@@ -26,8 +32,29 @@ repLoop = do
     whenJustM (getInputLine "REPL> ") $ \input -> do
         case words input of
             (commandLabel : commandArgs) -> do
-                outputStrLn commandLabel
-                outputStrLn (show commandArgs)
+                let
+                    execute :: HasCallStack => REPLCommand c => c -> AppStateT IO ()
+                    execute command = executeREPLCommand command commandLabel commandArgs
+
+                    execution =
+                        case commandLabel of
+                            "help" -> execute HelpCommand
+                            _      -> error (printf "Command '%s' is unknown." commandLabel)
+
+                currentAppState <- lift getAppState
+                executionResult <- lift (lift (try (runAppStateT execution currentAppState)))
+
+                case executionResult of
+                    Right ((), newState) -> do
+                        lift (putAppState newState)
+                        repLoop
+
+                    Left (err :: SomeException) -> do
+                        when (show err =~ ("^Exit(Success|Failure)( [0-9]+)?$" :: String)) $
+                            throw err
+
+                        outputStrLn (show err)
+                        repLoop
 
             [] ->
                 return ()
