@@ -1,3 +1,6 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+
 module AppState
     ( AppState(..)
     , AppStateT
@@ -6,17 +9,25 @@ module AppState
     , putAppState
     , putStrLn'
     , initialAppState
+    , initialiseVersionManifestWith
+    , getMinecraftGameDir
+    , getVersionManifest
     ) where
 
 import           Imports
 
-import           AppOption                        (AppOption)
+import           AppOption                        (AppOption (..))
 
+import           Control.Lens                     (makeLenses, set)
 import           Control.Monad.Trans.State.Strict (StateT, get, put, runStateT)
+import           Data.Minecraft.VersionManifest   (VersionManifest)
 
-newtype AppState = AppState
-    { _appOption :: AppOption
+data AppState = AppState
+    { _appOption       :: AppOption
+    , _versionManifest :: Maybe VersionManifest
     }
+
+makeLenses ''AppState
 
 type AppStateT = StateT AppState
 
@@ -35,5 +46,19 @@ putStrLn' = lift . putStrLn
 initialAppState :: AppOption -> AppState
 initialAppState appOpt =
     AppState
-        { _appOption = appOpt
+        { _appOption       = appOpt
+        , _versionManifest = Nothing
         }
+
+initialiseVersionManifestWith :: Monad m => VersionManifest -> AppStateT m ()
+initialiseVersionManifestWith manifest = do
+    appState <- getAppState
+    putAppState (set versionManifest (Just manifest) appState)
+
+getMinecraftGameDir :: Monad m => AppStateT m FilePath
+getMinecraftGameDir = getAppState <&> (_minecraftGameDir . _appOption)
+
+getVersionManifest :: (HasCallStack, Monad m) => AppStateT m VersionManifest
+getVersionManifest = (getAppState <&> _versionManifest) >>= \case
+    Just manifest -> return manifest
+    Nothing       -> error "The VersionManifest has not been initialised yet."

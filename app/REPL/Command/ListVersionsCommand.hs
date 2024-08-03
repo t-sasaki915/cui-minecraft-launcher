@@ -4,7 +4,6 @@ module REPL.Command.ListVersionsCommand (ListVersionsCommand (ListVersionsComman
 
 import           Imports
 
-import           AppOption
 import           AppState
 
 import           Data.Minecraft.VersionManifest
@@ -55,19 +54,13 @@ listVersionsCommandArgParser =
 
 listVersionsCommandProcedure :: HasCallStack => ListVersionsCommand -> AppStateT IO ()
 listVersionsCommandProcedure opts = do
-    minecraftDir <- getAppState <&> (_minecraftGameDir . _appOption)
-
     let releases          = showReleases opts
         snapshots         = showSnapshots opts
         oldBetas          = showOldBetas opts
         oldAlphas         = showOldAlphas opts
         noOptionSpecified = not releases && not snapshots && not oldBetas && not oldAlphas
 
-        localVersionManifestPath = minecraftDir </> "versions" </> "version_manifest.json"
-
-    versionManifestJson <- lift (readFile localVersionManifestPath)
-    let versionManifest = parseVersionManifest versionManifestJson
-        mcVersions = versions versionManifest
+    mcVersions <- getVersionManifest <&> versions
 
     when noOptionSpecified $
         showVersionList mcVersions

@@ -5,7 +5,6 @@ module REPL.REPLMain (replMain, replTabCompletion) where
 import           Imports
 
 import           AppState
-import           CrossPlatform                    (currentOSType)
 import           REPL.Command.ExitCommand
 import           REPL.Command.HelpCommand
 import           REPL.Command.ListVersionsCommand
@@ -16,6 +15,7 @@ import           Control.Exception                (SomeException (..), throw,
 import           Data.List                        (isPrefixOf)
 import           Data.Version                     (showVersion)
 import           System.Console.Haskeline
+import           System.OperatingSystem           (currentOSType)
 
 replMain :: InputT (AppStateT IO) ()
 replMain = do

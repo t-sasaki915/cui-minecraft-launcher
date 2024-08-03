@@ -1,6 +1,6 @@
 module AppOption (AppOption(..), getAppOptionParser) where
 
-import           CrossPlatform       (getDefaultMinecraftGameDir)
+import           Game.Minecraft.MinecraftFiles (getDefaultMinecraftGameDir)
 import           Options.Applicative
 
 newtype AppOption = AppOption

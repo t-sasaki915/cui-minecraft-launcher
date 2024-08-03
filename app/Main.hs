@@ -4,14 +4,33 @@ import           Imports
 
 import           AppOption
 import           AppState
-import           CrossPlatform                  (currentOSType)
 import           REPL.REPLMain                  (replMain, replTabCompletion)
 
-import           Data.Minecraft.VersionManifest (fetchVersionManifestFromMojang)
+import           Control.Either.Extra           (throwEither, throwEitherM)
+import           Data.Minecraft.VersionManifest
 import           Data.Version                   (showVersion)
+import           Game.Minecraft.MinecraftFiles
 import           Options.Applicative
 import           System.Console.Haskeline
 import           System.Directory
+import           System.OperatingSystem         (currentOSType)
+
+initialiseVersionManifest :: HasCallStack => AppStateT IO ()
+initialiseVersionManifest = do
+    minecraftDir <- getMinecraftGameDir
+    let localVersionManifestPath = getVersionManifestPath minecraftDir
+
+    whenM (lift (doesFileExist localVersionManifestPath)) $
+        lift (removeFile localVersionManifestPath)
+
+    putStrLn' "Fetching Minecraft versions from Mojang server..."
+
+    versionManifestJson <- throwEitherM (lift fetchVersionManifestFromMojang)
+    let versionManifest = throwEither (parseVersionManifest versionManifestJson)
+
+    lift (writeFile localVersionManifestPath versionManifestJson)
+
+    initialiseVersionManifestWith versionManifest
 
 main :: IO ()
 main = do
@@ -23,22 +42,11 @@ main = do
                     (showVersion version) (show currentOSType))))
 
     void $ flip runAppStateT (initialAppState appOption) $ do
-        minecraftDir <- getAppState <&> (_minecraftGameDir . _appOption)
-
+        minecraftDir <- getMinecraftGameDir
+        lift (createMinecraftDirectoriesIfMissing minecraftDir)
         putStrLn' (printf "Using '%s' as the Minecraft game directory." minecraftDir)
-        lift (createDirectoryIfMissing True minecraftDir)
 
-        let minecraftVersionsDir = minecraftDir </> "versions"
-            localVersionManifestPath = minecraftVersionsDir </> "version_manifest.json"
-        lift (createDirectoryIfMissing True minecraftVersionsDir)
-
-        whenM (lift (doesFileExist localVersionManifestPath)) $
-            lift (removeFile localVersionManifestPath)
-
-        putStrLn' "Fetching Minecraft versions from Mojang server..."
-
-        versionManifest <- lift fetchVersionManifestFromMojang
-        lift (writeFile localVersionManifestPath versionManifest)
+        initialiseVersionManifest
 
         let
             haskelineSettings =

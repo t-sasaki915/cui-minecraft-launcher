@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP #-}
-
 module Data.Minecraft.VersionManifest
     ( MCVersionID
     , LatestVersions (..)
@@ -10,12 +8,11 @@ module Data.Minecraft.VersionManifest
     , parseVersionManifest
     ) where
 
-import           Control.Monad            (when)
 import           Data.Aeson
 import           Data.ByteString          (pack)
 import           Data.ByteString.Internal (c2w)
 import           Data.Time.Clock          (UTCTime)
-import           GHC.Stack                (HasCallStack)
+import           Network.Curl             (curlExecutableName)
 import           System.Exit              (ExitCode (..))
 import           System.Process
 import           Text.Printf              (printf)
@@ -76,18 +73,7 @@ instance FromJSON VersionManifest where
             <*> (m .: "versions")
     parseJSON x = fail (printf "Invalid VersionManifest structure: %s" (show x))
 
-curlExecName :: String
-#ifdef mingw32_HOST_OS
-curlExecName = "curl.exe"
-#endif
-#ifdef linux_HOST_OS
-curlExecName = "curl"
-#endif
-#ifdef darwin_HOST_OS
-curlExecName = "curl"
-#endif
-
-fetchVersionManifestFromMojang :: HasCallStack => IO String
+fetchVersionManifestFromMojang :: IO (Either String String)
 fetchVersionManifestFromMojang = do
     let
         curlArgs =
@@ -98,18 +84,17 @@ fetchVersionManifestFromMojang = do
             ]
 
     (exitCode, stdout, stderr) <- readCreateProcessWithExitCode
-        (proc curlExecName curlArgs) []
+        (proc curlExecutableName curlArgs) []
 
-    when (exitCode /= ExitSuccess) $
-        error (printf "Failed to fetch version_manifest.json from Mojang server:\n%s" stderr)
+    case exitCode of
+        ExitSuccess -> return (Right stdout)
+        _           -> return (Left stderr)
 
-    return stdout
-
-parseVersionManifest :: HasCallStack => String -> VersionManifest
+parseVersionManifest :: String -> Either String VersionManifest
 parseVersionManifest rawJson =
     case eitherDecodeStrict' (pack $ map c2w rawJson) of
         Right versionManifest ->
-            versionManifest
+            Right versionManifest
 
         Left err ->
-            error (printf "Failed to parse version_manifest.json: %s" err)
+            Left (printf "Failed to parse version_manifest.json: %s" err)
