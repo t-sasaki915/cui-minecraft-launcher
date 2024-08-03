@@ -9,6 +9,7 @@ import           CrossPlatform                     (currentOSType)
 import           REPL.Command.ExitCommand
 import           REPL.Command.FetchVersionsCommand
 import           REPL.Command.HelpCommand
+import           REPL.Command.ListVersionsCommand
 import           REPL.REPLCommand                  (REPLCommand (..))
 
 import           Control.Exception                 (SomeException (..), throw,
@@ -51,6 +52,7 @@ repLoop = do
                             "help"          -> execute HelpCommand
                             "exit"          -> execute ExitCommand
                             "fetchVersions" -> execute FetchVersionsCommand
+                            "listVersions"  -> execute ListVersionsCommand
                             _               -> error (printf "Command '%s' is unknown." commandLabel)
 
                 currentAppState <- lift getAppState

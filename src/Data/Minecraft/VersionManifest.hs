@@ -11,10 +11,10 @@ module Data.Minecraft.VersionManifest
     ) where
 
 import           Control.Monad            (when)
-import           Core.Data.Clock          (Time)
 import           Data.Aeson
 import           Data.ByteString          (pack)
 import           Data.ByteString.Internal (c2w)
+import           Data.Time.Clock          (UTCTime)
 import           GHC.Stack                (HasCallStack)
 import           System.Exit              (ExitCode (..))
 import           System.Process
@@ -35,7 +35,7 @@ instance FromJSON LatestVersions where
             <*> (m .: "snapshot")
     parseJSON x = fail (printf "Invalid LatestVersions structure: %s" (show x))
 
-data MCVersionType = Release | Snapshot | OldBeta | OldAlpha deriving Show
+data MCVersionType = Release | Snapshot | OldBeta | OldAlpha deriving (Show, Eq)
 
 instance FromJSON MCVersionType where
     parseJSON (String "release")   = pure Release
@@ -48,8 +48,8 @@ data MCVersion = MCVersion
     { mcVersionID          :: MCVersionID
     , mcVersionType        :: MCVersionType
     , mcVersionUrl         :: String
-    , mcVersionTime        :: Time
-    , mcVersionReleaseTime :: Time
+    , mcVersionTime        :: UTCTime
+    , mcVersionReleaseTime :: UTCTime
     }
     deriving Show
 
