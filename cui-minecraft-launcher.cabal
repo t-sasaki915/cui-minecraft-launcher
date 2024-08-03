@@ -65,7 +65,5 @@ executable cui-minecraft-launcher-exe
     , extra ==1.7.14
     , haskeline ==0.8.2.1
     , filepath ==1.4.300.1
-    , text ==2.0.2
-    , bytestring ==0.11.5.3
   default-language: Haskell2010
   default-extensions: LambdaCase, OverloadedStrings
