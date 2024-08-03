@@ -41,7 +41,6 @@ executable cui-minecraft-launcher-exe
   main-is: Main.hs
   other-modules:
       REPL.Command.ExitCommand
-      REPL.Command.FetchVersionsCommand
       REPL.Command.HelpCommand
       REPL.Command.ListVersionsCommand
       REPL.REPLCommand

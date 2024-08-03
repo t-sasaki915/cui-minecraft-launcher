@@ -6,12 +6,11 @@ import           Imports
 
 import           AppOption
 import           AppState
-import           REPL.Command.FetchVersionsCommand
 
 import           Data.Minecraft.VersionManifest
 import           Data.Time
 import           Options.Applicative
-import           REPL.REPLCommand                  (REPLCommand (..))
+import           REPL.REPLCommand               (REPLCommand (..))
 
 
 data ListVersionsCommand = ListVersionsCommand
@@ -65,9 +64,6 @@ listVersionsCommandProcedure opts = do
         noOptionSpecified = not releases && not snapshots && not oldBetas && not oldAlphas
 
         localVersionManifestPath = minecraftDir </> "versions" </> "version_manifest.json"
-
-    unlessM (lift (doesFileExist localVersionManifestPath)) $
-        internalExecuteREPLCommand FetchVersionsCommand []
 
     versionManifestJson <- lift (readFile localVersionManifestPath)
     let versionManifest = parseVersionManifest versionManifestJson

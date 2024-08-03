@@ -4,13 +4,14 @@ import           Imports
 
 import           AppOption
 import           AppState
-import           CrossPlatform            (currentOSType)
-import           REPL.REPLMain            (replMain, replTabCompletion)
+import           CrossPlatform                  (currentOSType)
+import           REPL.REPLMain                  (replMain, replTabCompletion)
 
-import           Data.Version             (showVersion)
+import           Data.Minecraft.VersionManifest (fetchVersionManifestFromMojang)
+import           Data.Version                   (showVersion)
 import           Options.Applicative
 import           System.Console.Haskeline
-import           System.Directory         (createDirectoryIfMissing)
+import           System.Directory
 
 main :: IO ()
 main = do
@@ -26,6 +27,18 @@ main = do
 
         putStrLn' (printf "Using '%s' as the Minecraft game directory." minecraftDir)
         lift (createDirectoryIfMissing True minecraftDir)
+
+        let minecraftVersionsDir = minecraftDir </> "versions"
+            localVersionManifestPath = minecraftVersionsDir </> "version_manifest.json"
+        lift (createDirectoryIfMissing True minecraftVersionsDir)
+
+        whenM (lift (doesFileExist localVersionManifestPath)) $
+            lift (removeFile localVersionManifestPath)
+
+        putStrLn' "Fetching Minecraft versions from Mojang server..."
+
+        versionManifest <- lift fetchVersionManifestFromMojang
+        lift (writeFile localVersionManifestPath versionManifest)
 
         let
             haskelineSettings =
