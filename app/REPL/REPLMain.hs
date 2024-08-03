@@ -62,7 +62,7 @@ repLoop = do
                         repLoop
 
                     Left (err :: SomeException) -> do
-                        when (show err =~ ("^Exit(Success|Failure)( [0-9]+)?$" :: String)) $
+                        when (show err =~ ("^Exit(Success|Failure [0-9]+)$" :: String)) $
                             throw err
 
                         outputStrLn (show err)
