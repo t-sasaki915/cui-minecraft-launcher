@@ -6,7 +6,7 @@ import           AppOption
 import           AppState
 import           REPL.REPLMain                  (replMain, replTabCompletion)
 
-import           Control.Either.Extra           (throwEither, throwEitherM)
+import           Control.Either.Extra           (throwEither)
 import           Data.Minecraft.VersionManifest
 import           Data.Version                   (showVersion)
 import           Game.Minecraft.MinecraftFiles
@@ -20,17 +20,30 @@ initialiseVersionManifest = do
     minecraftDir <- getMinecraftGameDir
     let localVersionManifestPath = getVersionManifestPath minecraftDir
 
-    whenM (lift (doesFileExist localVersionManifestPath)) $
-        lift (removeFile localVersionManifestPath)
+    lift fetchVersionManifestFromMojang >>= \case
+        Right versionManifestJson -> do
+            putStrLn' "Using the latest Minecraft version list."
 
-    putStrLn' "Fetching Minecraft versions from Mojang server..."
+            let versionManifest = throwEither (parseVersionManifest versionManifestJson)
 
-    versionManifestJson <- throwEitherM (lift fetchVersionManifestFromMojang)
-    let versionManifest = throwEither (parseVersionManifest versionManifestJson)
+            whenM (lift (doesFileExist localVersionManifestPath)) $
+                lift (removeFile localVersionManifestPath)
 
-    lift (writeFile localVersionManifestPath versionManifestJson)
+            lift (writeFile localVersionManifestPath versionManifestJson)
+            initialiseVersionManifestWith versionManifest
 
-    initialiseVersionManifestWith versionManifest
+        Left errMsg -> do
+            putStrLn' (printf "Failed to fetch Minecraft versions from Mojang server: %s" errMsg)
+
+            unlessM (lift (doesFileExist localVersionManifestPath)) $
+                error "Could not find the local VersionManifest. Please connect to the internet."
+
+            putStrLn' "Using the local Minecraft version list."
+
+            versionManifestJson <- lift (readFile localVersionManifestPath)
+            let versionManifest = throwEither (parseVersionManifest versionManifestJson)
+
+            initialiseVersionManifestWith versionManifest
 
 main :: IO ()
 main = do

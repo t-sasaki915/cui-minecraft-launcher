@@ -19,11 +19,12 @@ import           System.OperatingSystem           (currentOSType)
 
 replMain :: InputT (AppStateT IO) ()
 replMain = do
+    outputStrLn ""
+
     outputStrLn $
         printf "This is cui-minecraft-launcher %s (%s) by TSasaki."
             (showVersion version) (show currentOSType)
 
-    outputStrLn ""
     outputStrLn "For the command reference, type 'help'."
     outputStrLn "To exit the program gracefully, type 'exit'."
     outputStrLn ""
