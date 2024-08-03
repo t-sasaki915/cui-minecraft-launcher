@@ -5,14 +5,16 @@ module REPL.REPLMain (replMain, replTabCompletion) where
 import           Imports
 
 import           AppState
-import           CrossPlatform            (currentOSType)
+import           CrossPlatform                     (currentOSType)
 import           REPL.Command.ExitCommand
+import           REPL.Command.FetchVersionsCommand
 import           REPL.Command.HelpCommand
-import           REPL.REPLCommand         (REPLCommand (..))
+import           REPL.REPLCommand                  (REPLCommand (..))
 
-import           Control.Exception        (SomeException (..), throw, try)
-import           Data.List                (isPrefixOf)
-import           Data.Version             (showVersion)
+import           Control.Exception                 (SomeException (..), throw,
+                                                    try)
+import           Data.List                         (isPrefixOf)
+import           Data.Version                      (showVersion)
 import           System.Console.Haskeline
 
 replMain :: InputT (AppStateT IO) ()
@@ -46,9 +48,10 @@ repLoop = do
 
                     execution =
                         case commandLabel of
-                            "help" -> execute HelpCommand
-                            "exit" -> execute ExitCommand
-                            _      -> error (printf "Command '%s' is unknown." commandLabel)
+                            "help"          -> execute HelpCommand
+                            "exit"          -> execute ExitCommand
+                            "fetchVersions" -> execute FetchVersionsCommand
+                            _               -> error (printf "Command '%s' is unknown." commandLabel)
 
                 currentAppState <- lift getAppState
                 executionResult <- lift (lift (try (runAppStateT execution currentAppState)))
