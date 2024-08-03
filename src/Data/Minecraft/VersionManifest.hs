@@ -94,7 +94,7 @@ fetchVersionManifestFromMojang = do
             [ "--fail"
             , "--silent"
             , "--show-error"
-            , "https://launchermeta.mojang.com/mc/game/version_manifest.json"
+            , "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
             ]
 
     (exitCode, stdout, stderr) <- readCreateProcessWithExitCode
