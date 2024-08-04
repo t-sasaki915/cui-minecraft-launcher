@@ -8,6 +8,7 @@ module AppState
     , getAppState
     , putAppState
     , putStrLn'
+    , putStr'
     , initialAppState
     , initialiseVersionManifestWith
     , getMinecraftGameDir
@@ -42,6 +43,9 @@ putAppState = put
 
 putStrLn' :: String -> AppStateT IO ()
 putStrLn' = lift . putStrLn
+
+putStr' :: String -> AppStateT IO ()
+putStr' = lift . putStr
 
 initialAppState :: AppOption -> AppState
 initialAppState appOpt =

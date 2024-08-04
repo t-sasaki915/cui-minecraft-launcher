@@ -7,14 +7,19 @@ module Game.Minecraft.MinecraftFiles
     , getMinecraftVersionsDir
     , getVersionManifestPath
     , createMinecraftDirectoriesIfMissing
+    , getMinecraftVersionDir
+    , getClientJsonPath
+    , getClientJarPath
     ) where
 
-import           Data.Function          ((&))
-import           Data.Functor           ((<&>))
-import           System.Directory       (createDirectoryIfMissing,
-                                         getHomeDirectory)
-import           System.FilePath        ((</>))
-import           System.OperatingSystem (OSType (..), currentOSType)
+import           Data.Function                  ((&))
+import           Data.Functor                   ((<&>))
+import           Data.Minecraft.VersionManifest (MCVersionID)
+import           System.Directory               (createDirectoryIfMissing,
+                                                 getHomeDirectory)
+import           System.FilePath                ((</>))
+import           System.OperatingSystem         (OSType (..), currentOSType)
+import           Text.Printf                    (printf)
 
 type MinecraftGameDir = FilePath
 
@@ -51,3 +56,13 @@ createMinecraftDirectoriesIfMissing mcDir =
         , getMinecraftLibrariesDir
         , getMinecraftVersionsDir
         ]
+
+
+getMinecraftVersionDir :: MCVersionID -> MinecraftGameDir -> FilePath
+getMinecraftVersionDir vID mcDir = getMinecraftVersionsDir mcDir </> vID
+
+getClientJsonPath :: MCVersionID -> MinecraftGameDir -> FilePath
+getClientJsonPath vID mcDir = getMinecraftVersionDir vID mcDir </> printf "%s.json" vID
+
+getClientJarPath :: MCVersionID -> MinecraftGameDir -> FilePath
+getClientJarPath vID mcDir = getMinecraftVersionDir vID mcDir </> printf "%s.jar" vID

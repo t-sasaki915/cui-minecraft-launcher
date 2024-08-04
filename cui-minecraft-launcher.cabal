@@ -46,6 +46,7 @@ library
 executable cui-minecraft-launcher-exe
   main-is: Main.hs
   other-modules:
+      Game.Minecraft.MinecraftLaunch
       REPL.Command.ExitCommand
       REPL.Command.HelpCommand
       REPL.Command.ListVersionsCommand
@@ -73,5 +74,6 @@ executable cui-minecraft-launcher-exe
     , filepath ==1.4.300.1
     , time ==1.12.2
     , lens ==5.2.3
+    , process ==1.6.19.0
   default-language: Haskell2010
   default-extensions: LambdaCase, OverloadedStrings

@@ -14,12 +14,19 @@ import           Control.Exception                (SomeException (..), throw,
                                                    try)
 import           Data.List                        (isPrefixOf)
 import           Data.Version                     (showVersion)
+import           Game.Minecraft.MinecraftLaunch   (prepareMinecraftLaunch)
 import           System.Console.Haskeline
 import           System.OperatingSystem           (currentOSType)
 
 replMain :: InputT (AppStateT IO) ()
 replMain = do
     outputStrLn ""
+
+    --Debug
+
+    lift (prepareMinecraftLaunch "b1.8.1")
+
+    --Debug
 
     outputStrLn $
         printf "This is cui-minecraft-launcher %s (%s) by TSasaki."
