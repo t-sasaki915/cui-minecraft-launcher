@@ -4,6 +4,8 @@ import           Imports
 
 import           AppState
 
+import           Control.Either.Extra           (throwEither)
+import           Data.Minecraft.ClientJson      (parseClientJson)
 import           Data.Minecraft.VersionManifest
 import           Game.Minecraft.MinecraftFiles
 import           Network.Curl                   (curlExecutableName)
@@ -59,5 +61,8 @@ downloadAndReadClientJson versionID = do
 prepareMinecraftLaunch :: HasCallStack => MCVersionID -> AppStateT IO ()
 prepareMinecraftLaunch versionID = do
     createVersionDirectoryIfMissing versionID
+
     rawClientJson <- downloadAndReadClientJson versionID
-    putStrLn' rawClientJson
+    let clientJson = throwEither (parseClientJson rawClientJson)
+    putStrLn' (show clientJson)
+    return ()
