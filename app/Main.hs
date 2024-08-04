@@ -7,6 +7,7 @@ import           AppState
 import           REPL.REPLMain                  (replMain, replTabCompletion)
 
 import           Control.Either.Extra           (throwEither)
+import qualified Data.ByteString                as BS
 import           Data.Minecraft.VersionManifest
 import           Data.Version                   (showVersion)
 import           Game.Minecraft.MinecraftFiles
@@ -37,7 +38,7 @@ initialiseVersionManifest = do
             whenM (lift (doesFileExist localVersionManifestPath)) $
                 lift (removeFile localVersionManifestPath)
 
-            lift (writeFile localVersionManifestPath versionManifestJson)
+            lift (BS.writeFile localVersionManifestPath versionManifestJson)
             initialiseVersionManifestWith versionManifest
 
         Left errMsg -> do
@@ -48,7 +49,7 @@ initialiseVersionManifest = do
 
             putStrLn' "Using the local Minecraft version list."
 
-            versionManifestJson <- lift (readFile localVersionManifestPath)
+            versionManifestJson <- lift (BS.readFile localVersionManifestPath)
             let versionManifest = throwEither (parseVersionManifest versionManifestJson)
 
             initialiseVersionManifestWith versionManifest

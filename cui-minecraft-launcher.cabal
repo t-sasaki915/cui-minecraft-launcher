@@ -23,6 +23,7 @@ library
       Control.Either.Extra
       Data.Minecraft.ClientJson
       Data.Minecraft.VersionManifest
+      Data.String.Extra
       Game.Minecraft.MinecraftFiles
       Network.Curl
       System.OperatingSystem
@@ -79,5 +80,6 @@ executable cui-minecraft-launcher-exe
     , lens ==5.2.3
     , process ==1.6.19.0
     , async ==2.2.5
+    , bytestring ==0.11.5.3
   default-language: Haskell2010
   default-extensions: LambdaCase, OverloadedStrings

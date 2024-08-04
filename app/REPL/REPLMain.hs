@@ -10,11 +10,9 @@ import           REPL.Command.HelpCommand
 import           REPL.Command.ListVersionsCommand
 import           REPL.REPLCommand                 (REPLCommand (..))
 
-import           Control.Concurrent.Async         (forConcurrently_)
 import           Control.Exception                (SomeException (..), throw,
                                                    try)
 import           Data.List                        (isPrefixOf)
-import           Data.Minecraft.VersionManifest
 import           Data.Version                     (showVersion)
 import           Game.Minecraft.MinecraftLaunch   (prepareMinecraftLaunch)
 import           System.Console.Haskeline
@@ -26,10 +24,7 @@ replMain = do
 
     --Debug
 
-    availableVersions <- lift getVersionManifest <&> versions
-    currentState <- lift getAppState
-    lift $ lift $ forConcurrently_ (map mcVersionID availableVersions) $ \vID ->
-        void $ runAppStateT (prepareMinecraftLaunch vID) currentState
+    lift (prepareMinecraftLaunch "1.20.1")
 
     --Debug
 

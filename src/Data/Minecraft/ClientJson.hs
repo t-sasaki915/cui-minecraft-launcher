@@ -20,12 +20,11 @@ module Data.Minecraft.ClientJson
     ) where
 
 import           Data.Aeson
-import           Data.ByteString          (pack)
-import           Data.ByteString.Internal (c2w)
-import           Data.Functor             ((<&>))
-import           Data.Text                (unpack)
-import           System.OperatingSystem   (OSArch, OSType)
-import           Text.Printf              (printf)
+import           Data.ByteString        (ByteString)
+import           Data.Functor           ((<&>))
+import           Data.Text              (unpack)
+import           System.OperatingSystem (OSArch, OSType)
+import           Text.Printf            (printf)
 
 type AssetVersion = String
 type JavaClass    = String
@@ -241,9 +240,9 @@ instance FromJSON ClientJson where
             <*> (m .:  "mainClass")
     parseJSON x = fail (printf "Invalid client.json structure: %s" (show x))
 
-parseClientJson :: String -> Either String ClientJson
+parseClientJson :: ByteString -> Either String ClientJson
 parseClientJson rawJson =
-    case eitherDecodeStrict' (pack $ map c2w rawJson) of
+    case eitherDecodeStrict' rawJson of
         Right versionManifest ->
             Right versionManifest
 

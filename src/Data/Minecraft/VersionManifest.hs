@@ -9,13 +9,10 @@ module Data.Minecraft.VersionManifest
     ) where
 
 import           Data.Aeson
-import           Data.ByteString          (pack)
-import           Data.ByteString.Internal (c2w)
-import           Data.Time.Clock          (UTCTime)
-import           Network.Curl             (curlExecutableName)
-import           System.Exit              (ExitCode (..))
-import           System.Process
-import           Text.Printf              (printf)
+import           Data.ByteString (ByteString)
+import           Data.Time.Clock (UTCTime)
+import           Network.Curl    (readBSContentFromUrl)
+import           Text.Printf     (printf)
 
 type MCVersionID = String
 
@@ -73,26 +70,13 @@ instance FromJSON VersionManifest where
             <*> (m .: "versions")
     parseJSON x = fail (printf "Invalid VersionManifest structure: %s" (show x))
 
-fetchVersionManifestFromMojang :: IO (Either String String)
-fetchVersionManifestFromMojang = do
-    let
-        curlArgs =
-            [ "--fail"
-            , "--silent"
-            , "--show-error"
-            , "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
-            ]
+fetchVersionManifestFromMojang :: IO (Either String ByteString)
+fetchVersionManifestFromMojang =
+    readBSContentFromUrl "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
-    (exitCode, stdout, stderr) <- readCreateProcessWithExitCode
-        (proc curlExecutableName curlArgs) []
-
-    case exitCode of
-        ExitSuccess -> return (Right stdout)
-        _           -> return (Left stderr)
-
-parseVersionManifest :: String -> Either String VersionManifest
+parseVersionManifest :: ByteString -> Either String VersionManifest
 parseVersionManifest rawJson =
-    case eitherDecodeStrict' (pack $ map c2w rawJson) of
+    case eitherDecodeStrict' rawJson of
         Right versionManifest ->
             Right versionManifest
 

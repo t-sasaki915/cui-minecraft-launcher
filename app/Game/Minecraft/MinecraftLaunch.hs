@@ -5,21 +5,20 @@ import           Imports
 import           AppState
 
 import           Control.Either.Extra           (throwEither)
+import           Data.ByteString                (ByteString)
+import qualified Data.ByteString                as BS
 import           Data.Minecraft.ClientJson      (parseClientJson)
 import           Data.Minecraft.VersionManifest
 import           Game.Minecraft.MinecraftFiles
-import           Network.Curl                   (curlExecutableName)
+import           Network.Curl                   (readBSContentFromUrl)
 import           System.Directory               (createDirectoryIfMissing)
-import           System.Exit                    (ExitCode (ExitSuccess))
-import           System.Process                 (proc,
-                                                 readCreateProcessWithExitCode)
 
 createVersionDirectoryIfMissing :: MCVersionID -> AppStateT IO ()
 createVersionDirectoryIfMissing versionID = do
     minecraftDir <- getMinecraftGameDir
     lift (createDirectoryIfMissing True (getMinecraftVersionDir versionID minecraftDir))
 
-downloadAndReadClientJson :: HasCallStack => MCVersionID -> AppStateT IO String
+downloadAndReadClientJson :: HasCallStack => MCVersionID -> AppStateT IO ByteString
 downloadAndReadClientJson versionID = do
     availableVersions <- getVersionManifest <&> versions
 
@@ -28,32 +27,20 @@ downloadAndReadClientJson versionID = do
             localClientJsonPath <- getMinecraftGameDir <&> getClientJsonPath versionID
 
             lift (doesFileExist localClientJsonPath) >>= \case
-                True -> do
-                    lift (readFile localClientJsonPath)
+                True ->
+                    lift (BS.readFile localClientJsonPath)
 
-                False -> do
-                    putStr' "Downloading a client.json ... "
+                False ->
+                    lift (readBSContentFromUrl clientJsonUrl) >>= \case
+                        Right clientJsonRaw -> do
+                            lift (BS.writeFile localClientJsonPath clientJsonRaw)
+                            putStrLn' (printf "Downloaded a client.json for Minecraft %s." versionID)
 
-                    let
-                        curlArgs =
-                            [ "--fail"
-                            , "--silent"
-                            , "--show-error"
-                            , clientJsonUrl
-                            ]
+                            return clientJsonRaw
 
-                    (exitCode, stdout, stderr) <- lift (readCreateProcessWithExitCode
-                        (proc curlExecutableName curlArgs) [])
+                        Left errMsg ->
+                            error (printf "Failed to download a client.json for Miecraft %s: %s" versionID errMsg)
 
-                    case exitCode of
-                        ExitSuccess -> do
-                            putStrLn' "OK."
-                            lift (writeFile localClientJsonPath stdout)
-                            return stdout
-
-                        _ -> do
-                            putStrLn' "Error."
-                            error (printf "Failed to download client.json: %s" stderr)
 
         Nothing ->
             error (printf "'%s' is not an available Minecraft version." versionID)
