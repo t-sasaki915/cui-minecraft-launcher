@@ -64,5 +64,5 @@ prepareMinecraftLaunch versionID = do
 
     rawClientJson <- downloadAndReadClientJson versionID
     let clientJson = throwEither (parseClientJson rawClientJson)
-    putStrLn' (show clientJson)
+    --putStrLn' (show clientJson)
     return ()

@@ -13,7 +13,15 @@ import           Game.Minecraft.MinecraftFiles
 import           Options.Applicative
 import           System.Console.Haskeline
 import           System.Directory
-import           System.OperatingSystem         (currentOSType)
+import           System.OperatingSystem         (currentOSType, fetchOSVersion)
+
+initialiseOSVersion :: HasCallStack => AppStateT IO ()
+initialiseOSVersion = do
+    osVer <- lift fetchOSVersion
+
+    putStrLn' (printf "Current OS: %s %s" (show currentOSType) osVer)
+
+    initialiseOSVersionWith osVer
 
 initialiseVersionManifest :: HasCallStack => AppStateT IO ()
 initialiseVersionManifest = do
@@ -55,6 +63,8 @@ main = do
                     (showVersion version) (show currentOSType))))
 
     void $ flip runAppStateT (initialAppState appOption) $ do
+        initialiseOSVersion
+
         minecraftDir <- getMinecraftGameDir
         lift (createMinecraftDirectoriesIfMissing minecraftDir)
         putStrLn' (printf "Using '%s' as the Minecraft game directory." minecraftDir)

@@ -10,9 +10,11 @@ module AppState
     , putStrLn'
     , putStr'
     , initialAppState
+    , initialiseOSVersionWith
     , initialiseVersionManifestWith
     , getMinecraftGameDir
     , getVersionManifest
+    , getOSVersion
     ) where
 
 import           Imports
@@ -25,6 +27,7 @@ import           Data.Minecraft.VersionManifest   (VersionManifest)
 
 data AppState = AppState
     { _appOption       :: AppOption
+    , _osVersion       :: Maybe String
     , _versionManifest :: Maybe VersionManifest
     }
 
@@ -51,8 +54,14 @@ initialAppState :: AppOption -> AppState
 initialAppState appOpt =
     AppState
         { _appOption       = appOpt
+        , _osVersion       = Nothing
         , _versionManifest = Nothing
         }
+
+initialiseOSVersionWith :: Monad m => String -> AppStateT m ()
+initialiseOSVersionWith osVer = do
+    appState <- getAppState
+    putAppState (set osVersion (Just osVer) appState)
 
 initialiseVersionManifestWith :: Monad m => VersionManifest -> AppStateT m ()
 initialiseVersionManifestWith manifest = do
@@ -65,4 +74,9 @@ getMinecraftGameDir = getAppState <&> (_minecraftGameDir . _appOption)
 getVersionManifest :: (HasCallStack, Monad m) => AppStateT m VersionManifest
 getVersionManifest = (getAppState <&> _versionManifest) >>= \case
     Just manifest -> return manifest
-    Nothing       -> error "The VersionManifest has not been initialised yet."
+    Nothing       -> error "_versionManifest has not been initialised yet."
+
+getOSVersion :: (HasCallStack, Monad m) => AppStateT m String
+getOSVersion = (getAppState <&> _osVersion) >>= \case
+    Just osVer -> return osVer
+    Nothing    -> error "_osVersion has not been initialised yet."
