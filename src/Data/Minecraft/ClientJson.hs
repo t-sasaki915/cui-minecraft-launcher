@@ -24,7 +24,7 @@ import           Data.ByteString          (pack)
 import           Data.ByteString.Internal (c2w)
 import           Data.Functor             ((<&>))
 import           Data.Text                (unpack)
-import           System.OperatingSystem   (OSType)
+import           System.OperatingSystem   (OSArch, OSType)
 import           Text.Printf              (printf)
 
 type AssetVersion = String
@@ -68,7 +68,7 @@ instance FromJSON Rule where
 data OSRule = OSRule
     { osNameRule       :: Maybe OSType
     , osVersionPattern :: Maybe String
-    , osArchNameRule   :: Maybe String
+    , osArchNameRule   :: Maybe OSArch
     }
     deriving Show
 
