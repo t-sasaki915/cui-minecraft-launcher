@@ -13,7 +13,6 @@ import           REPL.REPLCommand                 (REPLCommand (..))
 import           Control.Concurrent.Async         (forConcurrently_)
 import           Control.Exception                (SomeException (..), throw,
                                                    try)
-import           Control.Monad.Trans.State        (StateT (runStateT))
 import           Data.List                        (isPrefixOf)
 import           Data.Minecraft.VersionManifest
 import           Data.Version                     (showVersion)
