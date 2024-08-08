@@ -27,7 +27,7 @@ import           Text.Printf                    (printf)
 type MinecraftGameDir = FilePath
 type AssetVersion = String
 
-getDefaultMinecraftGameDir :: IO FilePath
+getDefaultMinecraftGameDir :: IO MinecraftGameDir
 getDefaultMinecraftGameDir = case currentOSType of
     Windows ->
         getHomeDirectory <&> (</> "AppData" </> "Roaming" </> ".minecraft")
