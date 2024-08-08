@@ -24,6 +24,7 @@ import           AppOption                        (AppOption (..))
 import           Control.Lens                     (makeLenses, set)
 import           Control.Monad.Trans.State.Strict (StateT, get, put, runStateT)
 import           Data.Minecraft.VersionManifest   (VersionManifest)
+import           System.IO                        (hFlush, stdout)
 
 data AppState = AppState
     { _appOption       :: AppOption
@@ -45,10 +46,14 @@ putAppState :: Monad m => AppState -> AppStateT m ()
 putAppState = put
 
 putStrLn' :: String -> AppStateT IO ()
-putStrLn' = lift . putStrLn
+putStrLn' str = lift $ do
+   putStrLn str
+   hFlush stdout
 
 putStr' :: String -> AppStateT IO ()
-putStr' = lift . putStr
+putStr' str = lift $ do
+    putStr str
+    hFlush stdout
 
 initialAppState :: AppOption -> AppState
 initialAppState appOpt =

@@ -220,6 +220,7 @@ data ClientJson = ClientJson
     , clientArgumentsLegacy :: Maybe String
     , clientAssetIndex      :: AssetIndex
     , clientAssets          :: AssetVersion
+    , clientVersionId       :: String
     , clientDownloads       :: ClientDownloads
     , clientJavaVersion     :: Maybe JavaVersion
     , clientLibraries       :: [ClientLibrary]
@@ -234,6 +235,7 @@ instance FromJSON ClientJson where
             <*> (m .:? "minecraftArguments")
             <*> (m .:  "assetIndex")
             <*> (m .:  "assets")
+            <*> (m .:  "id")
             <*> (m .:  "downloads")
             <*> (m .:? "javaVersion")
             <*> (m .:  "libraries")

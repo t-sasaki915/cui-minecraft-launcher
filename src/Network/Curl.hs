@@ -2,6 +2,7 @@ module Network.Curl
     ( curlExecutableName
     , readContentFromUrl
     , readBSContentFromUrl
+    , downloadFileFromUrl
     ) where
 
 import           Data.ByteString          (ByteString, pack)
@@ -44,3 +45,26 @@ readBSContentFromUrl :: Url -> IO (Either String ByteString)
 readBSContentFromUrl url =
     readContentFromUrl url >>=
         either (return . Left) (return . Right . pack . map c2w)
+
+downloadFileFromUrl :: FilePath -> Url -> IO (Either String ())
+downloadFileFromUrl downloadPath url = do
+    let
+        curlArgs =
+            [ "--fail"
+            , "--silent"
+            , "--show-error"
+            , "--output"
+            , downloadPath
+            , url
+            ]
+
+    (exitCode, _, stderr) <-
+        readCreateProcessWithExitCode
+            (proc curlExecutableName curlArgs) []
+
+    case exitCode of
+        ExitSuccess ->
+            return (Right ())
+
+        _ ->
+            return (Left (removeLastNewLine stderr))
