@@ -43,7 +43,7 @@ getMinecraftAssetIndexDir :: MinecraftGameDir -> FilePath
 getMinecraftAssetIndexDir = (</> "indexes") . getMinecraftAssetsDir
 
 getMinecraftAssetIndexPath :: AssetVersion -> MinecraftGameDir -> FilePath
-getMinecraftAssetIndexPath assetIndex = (</> printf "%s.json" assetIndex) . getMinecraftAssetIndexDir
+getMinecraftAssetIndexPath assetVersion = (</> printf "%s.json" assetVersion) . getMinecraftAssetIndexDir
 
 getMinecraftBinDir :: MinecraftGameDir -> FilePath
 getMinecraftBinDir = (</> "bin")
