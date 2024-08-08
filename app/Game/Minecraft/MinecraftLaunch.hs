@@ -7,7 +7,7 @@ import           AppState
 import           Control.Either.Extra           (throwEither)
 import           Data.ByteString                (ByteString)
 import qualified Data.ByteString                as BS
-import           Data.Minecraft.ClientJson      (parseClientJson)
+import           Data.Minecraft.ClientJson
 import           Data.Minecraft.VersionManifest
 import           Game.Minecraft.MinecraftFiles
 import           Network.Curl                   (readBSContentFromUrl)
@@ -45,11 +45,27 @@ downloadAndReadClientJson versionID = do
         Nothing ->
             error (printf "'%s' is not an available Minecraft version." versionID)
 
+downloadAssetIndex :: HasCallStack => ClientJson -> AppStateT IO ()
+downloadAssetIndex clientJson = do
+    let assetVer = clientAssets clientJson
+    localAssetIndexPath <- getMinecraftGameDir <&> getMinecraftAssetIndexPath assetVer
+
+    unlessM (lift (doesFileExist localAssetIndexPath)) $ do
+        let assetIndexUrl = assetUrl (clientAssetIndex clientJson)
+
+        lift (readBSContentFromUrl assetIndexUrl) >>= \case
+            Right assetIndexRaw -> do
+                lift (BS.writeFile localAssetIndexPath assetIndexRaw)
+                putStrLn' (printf "Downloaded an asset index version '%s'." assetVer)
+
+            Left errMsg ->
+                error (printf "Failed to download an asset index version '%s': %s" assetVer errMsg)
+
 prepareMinecraftLaunch :: HasCallStack => MCVersionID -> AppStateT IO ()
 prepareMinecraftLaunch versionID = do
     createVersionDirectoryIfMissing versionID
 
     rawClientJson <- downloadAndReadClientJson versionID
     let clientJson = throwEither (parseClientJson rawClientJson)
-    --putStrLn' (show clientJson)
-    return ()
+
+    downloadAssetIndex clientJson

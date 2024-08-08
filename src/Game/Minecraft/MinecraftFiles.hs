@@ -1,7 +1,10 @@
 module Game.Minecraft.MinecraftFiles
     ( MinecraftGameDir
+    , AssetIndex
     , getDefaultMinecraftGameDir
     , getMinecraftAssetsDir
+    , getMinecraftAssetIndexDir
+    , getMinecraftAssetIndexPath
     , getMinecraftBinDir
     , getMinecraftLibrariesDir
     , getMinecraftVersionsDir
@@ -22,6 +25,7 @@ import           System.OperatingSystem         (OSType (..), currentOSType)
 import           Text.Printf                    (printf)
 
 type MinecraftGameDir = FilePath
+type AssetIndex = String
 
 getDefaultMinecraftGameDir :: IO FilePath
 getDefaultMinecraftGameDir = case currentOSType of
@@ -34,6 +38,12 @@ getDefaultMinecraftGameDir = case currentOSType of
 
 getMinecraftAssetsDir :: MinecraftGameDir -> FilePath
 getMinecraftAssetsDir = (</> "assets")
+
+getMinecraftAssetIndexDir :: MinecraftGameDir -> FilePath
+getMinecraftAssetIndexDir = (</> "indexes") . getMinecraftAssetsDir
+
+getMinecraftAssetIndexPath :: AssetIndex -> MinecraftGameDir -> FilePath
+getMinecraftAssetIndexPath assetIndex = (</> printf "%s.json" assetIndex) . getMinecraftAssetIndexDir
 
 getMinecraftBinDir :: MinecraftGameDir -> FilePath
 getMinecraftBinDir = (</> "bin")
@@ -52,6 +62,7 @@ createMinecraftDirectoriesIfMissing mcDir =
     mapM_ (createDirectoryIfMissing True . (mcDir &))
         [ id
         , getMinecraftAssetsDir
+        , getMinecraftAssetIndexDir
         , getMinecraftBinDir
         , getMinecraftLibrariesDir
         , getMinecraftVersionsDir
