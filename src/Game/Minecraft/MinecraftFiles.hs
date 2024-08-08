@@ -1,10 +1,14 @@
 module Game.Minecraft.MinecraftFiles
     ( MinecraftGameDir
     , AssetVersion
+    , AssetHash
     , getDefaultMinecraftGameDir
     , getMinecraftAssetsDir
     , getMinecraftAssetIndexDir
     , getMinecraftAssetIndexPath
+    , getMinecraftAssetObjectsDir
+    , getMinecraftAssetObjectPrefixDir
+    , getMinecraftAssetObjectPath
     , getMinecraftBinDir
     , getMinecraftLibrariesDir
     , getMinecraftVersionsDir
@@ -26,6 +30,7 @@ import           Text.Printf                    (printf)
 
 type MinecraftGameDir = FilePath
 type AssetVersion = String
+type AssetHash = String
 
 getDefaultMinecraftGameDir :: IO MinecraftGameDir
 getDefaultMinecraftGameDir = case currentOSType of
@@ -45,6 +50,15 @@ getMinecraftAssetIndexDir = (</> "indexes") . getMinecraftAssetsDir
 getMinecraftAssetIndexPath :: AssetVersion -> MinecraftGameDir -> FilePath
 getMinecraftAssetIndexPath assetVersion = (</> printf "%s.json" assetVersion) . getMinecraftAssetIndexDir
 
+getMinecraftAssetObjectsDir :: MinecraftGameDir -> FilePath
+getMinecraftAssetObjectsDir = (</> "objects") . getMinecraftAssetsDir
+
+getMinecraftAssetObjectPrefixDir :: AssetHash -> MinecraftGameDir -> FilePath
+getMinecraftAssetObjectPrefixDir assetHash = (</> take 2 assetHash) . getMinecraftAssetObjectsDir
+
+getMinecraftAssetObjectPath :: AssetHash -> MinecraftGameDir -> FilePath
+getMinecraftAssetObjectPath assetHash mcDir = getMinecraftAssetObjectPrefixDir assetHash mcDir </> assetHash
+
 getMinecraftBinDir :: MinecraftGameDir -> FilePath
 getMinecraftBinDir = (</> "bin")
 
@@ -63,6 +77,7 @@ createMinecraftDirectoriesIfMissing mcDir =
         [ id
         , getMinecraftAssetsDir
         , getMinecraftAssetIndexDir
+        , getMinecraftAssetObjectsDir
         , getMinecraftBinDir
         , getMinecraftLibrariesDir
         , getMinecraftVersionsDir
