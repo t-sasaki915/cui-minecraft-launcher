@@ -130,9 +130,9 @@ downloadAssets assetHashes = do
                 }
 
     assetHashesToDownload <-
-        flip filterM assetHashes $ \assetHash -> do
-            let localAssetObjectPath = getMinecraftAssetObjectPath assetHash minecraftDir
-            lift (doesFileExist localAssetObjectPath) <&> not
+        flip filterM assetHashes $ \assetHash ->
+            let localAssetObjectPath = getMinecraftAssetObjectPath assetHash minecraftDir in
+                lift (doesFileExist localAssetObjectPath) <&> not
 
     unless (null assetHashesToDownload) $ do
         progressBar <- lift (newProgressBar progressBarStyle 10 (Progress 0 (length assetHashesToDownload) ()))
