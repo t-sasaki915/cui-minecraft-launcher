@@ -30,5 +30,6 @@ commandAndDescriptions =
     [ "help"         ~> "Show the command reference of this REPL."
     , "exit"         ~> "Exit the program."
     , "listVersions" ~> "Show the list of available Minecraft versions."
+    , "quickStart"   ~> "Launch a Minecraft client without making an installation."
     ]
     where (~>) a b = (a, b)

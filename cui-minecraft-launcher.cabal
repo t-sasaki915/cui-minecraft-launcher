@@ -55,6 +55,7 @@ executable cui-minecraft-launcher-exe
       REPL.Command.ExitCommand
       REPL.Command.HelpCommand
       REPL.Command.ListVersionsCommand
+      REPL.Command.QuickStartCommand
       REPL.REPLCommand
       REPL.REPLMain
       AppOption

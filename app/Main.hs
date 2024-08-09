@@ -18,9 +18,11 @@ import           System.OperatingSystem         (currentOSType, fetchOSVersion)
 
 initialiseOSVersion :: HasCallStack => AppStateT IO ()
 initialiseOSVersion = do
+    putStr' "Checking OS version ..."
+
     osVer <- lift fetchOSVersion
 
-    putStrLn' (printf "Current OS: %s %s" (show currentOSType) osVer)
+    putStrLn' (printf "%s %s" (show currentOSType) osVer)
 
     initialiseOSVersionWith osVer
 

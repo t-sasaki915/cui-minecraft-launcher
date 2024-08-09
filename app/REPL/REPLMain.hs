@@ -8,25 +8,19 @@ import           AppState
 import           REPL.Command.ExitCommand
 import           REPL.Command.HelpCommand
 import           REPL.Command.ListVersionsCommand
+import           REPL.Command.QuickStartCommand
 import           REPL.REPLCommand                 (REPLCommand (..))
 
 import           Control.Exception                (SomeException (..), throw,
                                                    try)
 import           Data.List                        (isPrefixOf)
 import           Data.Version                     (showVersion)
-import           Game.Minecraft.MinecraftLaunch   (prepareMinecraftLaunch)
 import           System.Console.Haskeline
 import           System.OperatingSystem           (currentOSType)
 
 replMain :: InputT (AppStateT IO) ()
 replMain = do
     outputStrLn ""
-
-    --Debug
-
-    lift (prepareMinecraftLaunch "1.20.1")
-
-    --Debug
 
     outputStrLn $
         printf "This is cui-minecraft-launcher %s (%s) by TSasaki."
@@ -59,6 +53,7 @@ repLoop = do
                             "help"         -> execute HelpCommand
                             "exit"         -> execute ExitCommand
                             "listVersions" -> execute ListVersionsCommand
+                            "quickStart"   -> execute QuickStartCommand
                             _              -> error (printf "Command '%s' is unknown." commandLabel)
 
                 currentAppState <- lift getAppState
