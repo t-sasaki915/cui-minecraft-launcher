@@ -128,30 +128,31 @@ downloadAssets assetHashes = do
                 , styleCurrent       = '>'
                 , styleClose         = "]"
                 }
-    progressBar <- lift (newProgressBar progressBarStyle 10 (Progress 0 (length assetHashes) ()))
 
-    let assetChunks = chunksOf 80 assetHashes
-
-    lift $ forM_ assetChunks $ \assetChunk ->
-        forConcurrently_ assetChunk $ \assetHash -> do
+    assetHashesToDownload <-
+        flip filterM assetHashes $ \assetHash -> do
             let localAssetObjectPath = getMinecraftAssetObjectPath assetHash minecraftDir
+            lift (doesFileExist localAssetObjectPath) <&> not
 
-            doesFileExist localAssetObjectPath >>= \case
-                True ->
-                    incProgress progressBar 1
+    unless (null assetHashesToDownload) $ do
+        progressBar <- lift (newProgressBar progressBarStyle 10 (Progress 0 (length assetHashesToDownload) ()))
 
-                False -> do
-                    let assetObjectPrefixDir = getMinecraftAssetObjectPrefixDir assetHash minecraftDir
-                    createDirectoryIfMissing True assetObjectPrefixDir
+        let assetChunks = chunksOf 80 assetHashesToDownload
 
-                    let assetObjectUrl = getMinecraftAssetObjectDownloadUrl assetHash
+        lift $ forM_ assetChunks $ \assetChunk ->
+            forConcurrently_ assetChunk $ \assetHash -> do
+                let localAssetObjectPath = getMinecraftAssetObjectPath assetHash minecraftDir
+                    assetObjectPrefixDir = getMinecraftAssetObjectPrefixDir assetHash minecraftDir
+                    assetObjectUrl = getMinecraftAssetObjectDownloadUrl assetHash
 
-                    downloadFileFromUrl localAssetObjectPath assetObjectUrl >>= \case
-                        Right () ->
-                            incProgress progressBar 1
+                createDirectoryIfMissing True assetObjectPrefixDir
 
-                        Left errMsg ->
-                            error (printf "Failed to download an asset '%s': %s." assetHash errMsg)
+                downloadFileFromUrl localAssetObjectPath assetObjectUrl >>= \case
+                    Right () ->
+                        incProgress progressBar 1
+
+                    Left errMsg ->
+                        error (printf "Failed to download an asset '%s': %s." assetHash errMsg)
 
 downloadClientJar :: HasCallStack => ClientJson -> AppStateT IO ()
 downloadClientJar clientJson = do
