@@ -14,6 +14,7 @@ module Game.Minecraft.MinecraftFiles
     , getMinecraftVirtualAssetObjectPath
     , getMinecraftBinDir
     , getMinecraftLibrariesDir
+    , getMinecraftLibraryPath
     , getMinecraftVersionsDir
     , getVersionManifestPath
     , createMinecraftDirectoriesIfMissing
@@ -78,6 +79,9 @@ getMinecraftBinDir = (</> "bin")
 
 getMinecraftLibrariesDir :: MinecraftGameDir -> FilePath
 getMinecraftLibrariesDir = (</> "libraries")
+
+getMinecraftLibraryPath :: FilePath -> MinecraftGameDir -> FilePath
+getMinecraftLibraryPath libPath = (</> libPath) . getMinecraftLibrariesDir
 
 getMinecraftVersionsDir :: MinecraftGameDir -> FilePath
 getMinecraftVersionsDir = (</> "versions")

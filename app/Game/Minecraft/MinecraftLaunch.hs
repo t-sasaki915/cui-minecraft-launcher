@@ -9,17 +9,40 @@ import           Control.Either.Extra           (throwEither)
 import           Data.ByteString                (ByteString)
 import qualified Data.ByteString                as BS
 import           Data.List.Extra                (chunksOf)
-import           Data.Maybe                     (fromMaybe)
+import           Data.Maybe                     (fromMaybe, maybeToList)
 import           Data.Minecraft.AssetIndex
 import           Data.Minecraft.ClientJson      hiding (AssetIndex)
 import           Data.Minecraft.VersionManifest
+import           Data.Monoid.Extra              (mwhen)
 import           Game.Minecraft.MinecraftFiles
 import           Game.Minecraft.MojangConstants (getMinecraftAssetObjectDownloadUrl)
 import           Network.Curl                   (downloadFileFromUrl,
                                                  readBSContentFromUrl)
 import           System.Directory               (createDirectoryIfMissing)
 import           System.FilePath                (takeDirectory)
+import           System.OperatingSystem
 import           System.ProgressBar
+
+progressBarStyle :: Label s -> Style s
+progressBarStyle title =
+    Style
+        { styleWidth         = TerminalWidth 100
+        , styleTodo          = '.'
+        , stylePrefix        = title
+        , stylePostfix       = percentage
+        , styleOpen          = "["
+        , styleOnComplete    = WriteNewline
+        , styleEscapeTodo    = const ""
+        , styleEscapePrefix  = const ""
+        , styleEscapePostfix = const ""
+        , styleEscapeOpen    = const ""
+        , styleEscapeDone    = const ""
+        , styleEscapeCurrent = const ""
+        , styleEscapeClose   = const ""
+        , styleDone          = '='
+        , styleCurrent       = '>'
+        , styleClose         = "]"
+        }
 
 createVersionDirectoryIfMissing :: MCVersionID -> AppStateT IO ()
 createVersionDirectoryIfMissing versionID = do
@@ -88,26 +111,7 @@ downloadAssetObjects clientJson assetIndex = do
         shouldMapToResources = fromMaybe False (mapToResources assetIndex)
         isVirtualAssets      = fromMaybe False (virtualAsset assetIndex)
 
-    let
-        progressBarStyle =
-            Style
-                { styleWidth         = TerminalWidth 100
-                , styleTodo          = '.'
-                , stylePrefix        = "Downloading assets"
-                , stylePostfix       = percentage
-                , styleOpen          = "["
-                , styleOnComplete    = WriteNewline
-                , styleEscapeTodo    = const ""
-                , styleEscapePrefix  = const ""
-                , styleEscapePostfix = const ""
-                , styleEscapeOpen    = const ""
-                , styleEscapeDone    = const ""
-                , styleEscapeCurrent = const ""
-                , styleEscapeClose   = const ""
-                , styleDone          = '='
-                , styleCurrent       = '>'
-                , styleClose         = "]"
-                }
+    let progBarStyle = progressBarStyle "Downloading assets"
 
     assetObjectsToDownload <-
         flip filterM (getAssetObjects assetIndex) $ \(AssetObject assetFile assetHash_) ->
@@ -118,7 +122,7 @@ downloadAssetObjects clientJson assetIndex = do
                 lift (doesFileExist localAssetObjectPath) <&> not
 
     unless (null assetObjectsToDownload) $ do
-        progressBar <- lift (newProgressBar progressBarStyle 10 (Progress 0 (length assetObjectsToDownload) ()))
+        progressBar <- lift (newProgressBar progBarStyle 10 (Progress 0 (length assetObjectsToDownload) ()))
 
         let assetChunks = chunksOf 80 assetObjectsToDownload
 
@@ -138,6 +142,53 @@ downloadAssetObjects clientJson assetIndex = do
 
                     Left errMsg ->
                         error (printf "Failed to download an asset '%s': %s." assetHash_ errMsg)
+
+downloadLibraries :: HasCallStack => ClientJson -> AppStateT IO ()
+downloadLibraries clientJson = do
+    currentOSVersion <- getOSVersion
+    minecraftDir     <- getMinecraftGameDir
+
+    let ruleContext = RuleContext
+            { osVersion = currentOSVersion
+            , isDemoUser = False
+            , hasCustomResolution = False
+            }
+
+    adoptedLibs <- fmap concat $ forM (clientLibraries clientJson) $ \library ->
+        let libRules = fromMaybe [] (libraryRules library) in return $
+            mwhen (processRules ruleContext libRules) $
+                let maybeArtifact = libraryArtifact (libraryDownloads library)
+                    maybeClassifier =
+                        case libraryClassifiers (libraryDownloads library) of
+                            Just classifiers ->
+                                case currentOSType of
+                                    Windows -> libraryNativesWindows classifiers
+                                    OSX     -> libraryNativesOSX classifiers
+                                    Linux   -> libraryNativesLinux classifiers
+                            Nothing -> Nothing in
+                    (maybeToList maybeArtifact ++ maybeToList maybeClassifier)
+
+    librariesToDownload <-
+        flip filterM adoptedLibs $ \(LibraryArtifact artPath _) ->
+            let localLibraryPath = getMinecraftLibraryPath artPath minecraftDir in
+                lift (doesFileExist localLibraryPath) <&> not
+
+    let progBarStyle = progressBarStyle "Downloading libraries"
+
+    unless (null librariesToDownload) $ do
+        progressBar <- lift (newProgressBar progBarStyle 10 (Progress 0 (length librariesToDownload) ()))
+
+        lift $ forConcurrently_ librariesToDownload $ \(LibraryArtifact artPath artUrl) -> do
+            let localLibraryPath = getMinecraftLibraryPath artPath minecraftDir
+
+            createDirectoryIfMissing True (takeDirectory localLibraryPath)
+
+            downloadFileFromUrl localLibraryPath artUrl >>= \case
+                Right () ->
+                    incProgress progressBar 1
+
+                Left errMsg ->
+                    error (printf "Failed to download a library '%s': %s" artPath errMsg)
 
 downloadClientJar :: HasCallStack => ClientJson -> AppStateT IO ()
 downloadClientJar clientJson = do
@@ -168,4 +219,5 @@ prepareMinecraftLaunch versionID = do
     let assetIndex = throwEither (parseAssetIndex rawAssetIndex)
     downloadAssetObjects clientJson assetIndex
 
+    downloadLibraries clientJson
     downloadClientJar clientJson
