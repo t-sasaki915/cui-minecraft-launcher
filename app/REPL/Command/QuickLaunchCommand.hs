@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 
-module REPL.Command.QuickStartCommand (QuickStartCommand (QuickStartCommand)) where
+module REPL.Command.QuickLaunchCommand (QuickLaunchCommand (QuickLaunchCommand)) where
 
 import           Imports
 
@@ -11,25 +11,25 @@ import           REPL.REPLCommand               (REPLCommand (..))
 import           Data.Minecraft.VersionManifest
 import           Options.Applicative
 
-data QuickStartCommand = QuickStartCommand
-                       | QuickStartCommandOptions
+data QuickLaunchCommand = QuickLaunchCommand
+                        | QuickLaunchCommandOptions
                             { launchClientVersion :: MCVersionID
                             }
 
-instance REPLCommand QuickStartCommand where
+instance REPLCommand QuickLaunchCommand where
     commandDesc = const "Launch a Minecraft client without making an installation."
 
-    commandArgParser = const (Just quickStartCommandArgParser)
+    commandArgParser = const (Just quickLaunchCommandArgParser)
 
-    commandProcedure = quickStartCommandProcedure
+    commandProcedure = quickLaunchCommandProcedure
 
-quickStartCommandArgParser :: AppStateT IO (Parser QuickStartCommand)
-quickStartCommandArgParser = do
+quickLaunchCommandArgParser :: AppStateT IO (Parser QuickLaunchCommand)
+quickLaunchCommandArgParser = do
     versionManifest <- getVersionManifest
     let latestVer = latestRelease (latestVersions versionManifest)
 
     return $
-        QuickStartCommandOptions
+        QuickLaunchCommandOptions
             <$> strOption
                 ( long "version"
                <> short 'v'
@@ -39,8 +39,8 @@ quickStartCommandArgParser = do
                <> help "Specify a Minecraft client version."
                 )
 
-quickStartCommandProcedure :: HasCallStack => QuickStartCommand -> AppStateT IO ()
-quickStartCommandProcedure opts = do
+quickLaunchCommandProcedure :: HasCallStack => QuickLaunchCommand -> AppStateT IO ()
+quickLaunchCommandProcedure opts = do
     let clientVersion = launchClientVersion opts
 
     prepareMinecraftLaunch clientVersion

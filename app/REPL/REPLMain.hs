@@ -8,7 +8,7 @@ import           AppState
 import           REPL.Command.ExitCommand
 import           REPL.Command.HelpCommand
 import           REPL.Command.ListVersionsCommand
-import           REPL.Command.QuickStartCommand
+import           REPL.Command.QuickLaunchCommand
 import           REPL.REPLCommand                 (REPLCommand (..))
 
 import           Control.Exception                (SomeException (..), throw,
@@ -53,7 +53,7 @@ repLoop = do
                             "help"         -> execute HelpCommand
                             "exit"         -> execute ExitCommand
                             "listVersions" -> execute ListVersionsCommand
-                            "quickStart"   -> execute QuickStartCommand
+                            "quickLaunch"  -> execute QuickLaunchCommand
                             _              -> error (printf "Command '%s' is unknown." commandLabel)
 
                 currentAppState <- lift getAppState
