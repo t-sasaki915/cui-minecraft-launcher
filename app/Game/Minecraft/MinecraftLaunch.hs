@@ -84,7 +84,9 @@ downloadAssetObjects :: HasCallStack => ClientJson -> AssetIndex -> AppStateT IO
 downloadAssetObjects clientJson assetIndex = do
     minecraftDir <- getMinecraftGameDir
     let versionID            = clientVersionId clientJson
+        assetVersion         = clientAssets clientJson
         shouldMapToResources = fromMaybe False (mapToResources assetIndex)
+        isVirtualAssets      = fromMaybe False (virtualAsset assetIndex)
 
     let
         progressBarStyle =
@@ -109,10 +111,10 @@ downloadAssetObjects clientJson assetIndex = do
 
     assetObjectsToDownload <-
         flip filterM (getAssetObjects assetIndex) $ \(AssetObject assetFile assetHash_) ->
-            let localAssetObjectPath =
-                    if shouldMapToResources
-                        then getMinecraftResourcePath assetFile versionID minecraftDir
-                        else getMinecraftAssetObjectPath assetHash_ minecraftDir in
+            let localAssetObjectPath
+                    | shouldMapToResources = getMinecraftResourcePath assetFile versionID minecraftDir
+                    | isVirtualAssets      = getMinecraftVirtualAssetObjectPath assetFile assetVersion minecraftDir
+                    | otherwise            = getMinecraftAssetObjectPath assetHash_ minecraftDir in
                 lift (doesFileExist localAssetObjectPath) <&> not
 
     unless (null assetObjectsToDownload) $ do
@@ -122,10 +124,10 @@ downloadAssetObjects clientJson assetIndex = do
 
         lift $ forM_ assetChunks $ \assetChunk ->
             forConcurrently_ assetChunk $ \(AssetObject assetFile assetHash_) -> do
-                let localAssetObjectPath =
-                        if shouldMapToResources
-                            then getMinecraftResourcePath assetFile versionID minecraftDir
-                            else getMinecraftAssetObjectPath assetHash_ minecraftDir
+                let localAssetObjectPath
+                        | shouldMapToResources = getMinecraftResourcePath assetFile versionID minecraftDir
+                        | isVirtualAssets      = getMinecraftVirtualAssetObjectPath assetFile assetVersion minecraftDir
+                        | otherwise            = getMinecraftAssetObjectPath assetHash_ minecraftDir
                     assetObjectUrl = getMinecraftAssetObjectDownloadUrl assetHash_
 
                 createDirectoryIfMissing True (takeDirectory localAssetObjectPath)

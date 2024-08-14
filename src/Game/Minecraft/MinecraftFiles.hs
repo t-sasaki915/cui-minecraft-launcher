@@ -9,6 +9,9 @@ module Game.Minecraft.MinecraftFiles
     , getMinecraftAssetObjectsDir
     , getMinecraftAssetObjectPrefixDir
     , getMinecraftAssetObjectPath
+    , getMinecraftVirtualDir
+    , getMinecraftVirtualAssetsDir
+    , getMinecraftVirtualAssetObjectPath
     , getMinecraftBinDir
     , getMinecraftLibrariesDir
     , getMinecraftVersionsDir
@@ -61,6 +64,15 @@ getMinecraftAssetObjectPrefixDir assetHash = (</> take 2 assetHash) . getMinecra
 getMinecraftAssetObjectPath :: AssetHash -> MinecraftGameDir -> FilePath
 getMinecraftAssetObjectPath assetHash mcDir = getMinecraftAssetObjectPrefixDir assetHash mcDir </> assetHash
 
+getMinecraftVirtualDir :: MinecraftGameDir -> FilePath
+getMinecraftVirtualDir = (</> "virtual") . getMinecraftAssetsDir
+
+getMinecraftVirtualAssetsDir :: AssetVersion -> MinecraftGameDir -> FilePath
+getMinecraftVirtualAssetsDir assetVersion = (</> assetVersion) . getMinecraftVirtualDir
+
+getMinecraftVirtualAssetObjectPath :: String -> AssetVersion -> MinecraftGameDir -> FilePath
+getMinecraftVirtualAssetObjectPath rPath assetVersion mcDir = getMinecraftVirtualAssetsDir assetVersion mcDir </> rPath
+
 getMinecraftBinDir :: MinecraftGameDir -> FilePath
 getMinecraftBinDir = (</> "bin")
 
@@ -80,6 +92,7 @@ createMinecraftDirectoriesIfMissing mcDir =
         , getMinecraftAssetsDir
         , getMinecraftAssetIndexDir
         , getMinecraftAssetObjectsDir
+        , getMinecraftVirtualDir
         , getMinecraftBinDir
         , getMinecraftLibrariesDir
         , getMinecraftVersionsDir

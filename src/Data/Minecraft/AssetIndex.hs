@@ -16,6 +16,7 @@ import           Text.Printf                   (printf)
 
 data AssetIndex = AssetIndex
     { mapToResources :: Maybe Bool
+    , virtualAsset   :: Maybe Bool
     , assetObjects   :: Object
     }
     deriving Show
@@ -24,6 +25,7 @@ instance FromJSON AssetIndex where
     parseJSON (Object m) =
         AssetIndex
             <$> (m .:? "map_to_resources")
+            <*> (m .:? "virtual")
             <*> (m .:  "objects")
     parseJSON x = fail (printf "Invalid AssetIndex structure: %s" (show x))
 
