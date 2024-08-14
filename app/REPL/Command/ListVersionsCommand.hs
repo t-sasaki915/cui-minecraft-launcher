@@ -7,6 +7,7 @@ import           Imports
 import           AppState
 
 import           Data.Minecraft.VersionManifest
+import           Data.Monoid.Extra              (mwhen)
 import           Data.Table
 import           Data.Time
 import           Options.Applicative
@@ -67,10 +68,10 @@ listVersionsCommandProcedure opts = do
         showVersionList mcVersions
 
     unless noOptionSpecified $ do
-        let releasesToShow  = if releases  then filtVersionType Release  mcVersions else []
-            snapshotsToShow = if snapshots then filtVersionType Snapshot mcVersions else []
-            oldBetasToShow  = if oldBetas  then filtVersionType OldBeta  mcVersions else []
-            oldAlphasToShow = if oldAlphas then filtVersionType OldAlpha mcVersions else []
+        let releasesToShow  = mwhen releases  (filtVersionType Release  mcVersions)
+            snapshotsToShow = mwhen snapshots (filtVersionType Snapshot mcVersions)
+            oldBetasToShow  = mwhen oldBetas  (filtVersionType OldBeta  mcVersions)
+            oldAlphasToShow = mwhen oldAlphas (filtVersionType OldAlpha mcVersions)
 
         showVersionList (releasesToShow ++ snapshotsToShow ++ oldBetasToShow ++ oldAlphasToShow)
 
