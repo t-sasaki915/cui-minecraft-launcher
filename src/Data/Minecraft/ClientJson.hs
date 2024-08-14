@@ -16,15 +16,21 @@ module Data.Minecraft.ClientJson
     , LibraryArtifact (..)
     , LibraryClassifiers (..)
     , ClientJson (..)
+    , RuleContext (..)
     , parseClientJson
+    , processRules
     ) where
 
+import           Control.Monad                    (forM)
+import           Control.Monad.Trans.State.Strict (execState, put)
 import           Data.Aeson
-import           Data.ByteString        (ByteString)
-import           Data.Functor           ((<&>))
-import           Data.Text              (unpack)
-import           System.OperatingSystem (OSArch, OSType)
-import           Text.Printf            (printf)
+import           Data.ByteString                  (ByteString)
+import           Data.Functor                     ((<&>))
+import           Data.Text                        (unpack)
+import           System.OperatingSystem           (OSArch, OSType,
+                                                   currentOSArch, currentOSType)
+import           Text.Printf                      (printf)
+import           Text.Regex.Posix                 ((=~))
 
 type AssetVersion = String
 type JavaClass    = String
@@ -250,3 +256,61 @@ parseClientJson rawJson =
 
         Left err ->
             Left (printf "Failed to parse client.json: %s" err)
+
+data RuleContext = RuleContext
+    { osVersion           :: String
+    , isDemoUser          :: Bool
+    , hasCustomResolution :: Bool
+    }
+
+processRule :: RuleContext -> Rule -> Bool
+processRule _ (Rule Allow Nothing Nothing) =
+    True
+processRule ctx (Rule Allow (Just osrule) Nothing) =
+    processOSRule ctx osrule
+processRule ctx (Rule Allow Nothing (Just featurerule)) =
+    processFeatureRule ctx featurerule
+processRule ctx (Rule Allow (Just osrule) (Just featurerule)) =
+    processOSRule ctx osrule && processFeatureRule ctx featurerule
+processRule _ (Rule Disallow Nothing Nothing) =
+    False
+processRule ctx (Rule Disallow (Just osrule) Nothing) =
+    not (processOSRule ctx osrule)
+processRule ctx (Rule Disallow Nothing (Just featurerule)) =
+    not (processFeatureRule ctx featurerule)
+processRule ctx (Rule Disallow (Just osrule) (Just featurerule)) =
+    not (processOSRule ctx osrule && processFeatureRule ctx featurerule)
+
+processFeatureRule :: RuleContext -> FeatureRule -> Bool
+processFeatureRule _ (FeatureRule Nothing Nothing) =
+    True
+processFeatureRule (RuleContext _ demo _) (FeatureRule (Just demo_) Nothing) =
+    demo == demo_
+processFeatureRule (RuleContext _ _ res) (FeatureRule Nothing (Just res_)) =
+    res == res_
+processFeatureRule (RuleContext _ demo res) (FeatureRule (Just demo_) (Just res_)) =
+    demo == demo_ && res == res_
+
+processOSRule :: RuleContext -> OSRule -> Bool
+processOSRule _ (OSRule Nothing Nothing Nothing) =
+    True
+processOSRule _ (OSRule (Just osType) Nothing Nothing) =
+    osType == currentOSType
+processOSRule (RuleContext osVer _ _) (OSRule Nothing (Just verPattern) Nothing) =
+    osVer =~ (verPattern :: String)
+processOSRule _ (OSRule Nothing Nothing (Just osArch)) =
+    osArch == currentOSArch
+processOSRule (RuleContext osVer _ _) (OSRule (Just osType) (Just verPattern) Nothing) =
+    osType == currentOSType && osVer =~ (verPattern :: String)
+processOSRule (RuleContext osVer _ _) (OSRule Nothing (Just verPattern) (Just osArch)) =
+    osVer =~ (verPattern :: String) && osArch == currentOSArch
+processOSRule _ (OSRule (Just osType) Nothing (Just osArch)) =
+    osType == currentOSType && osArch == currentOSArch
+processOSRule (RuleContext osVer _ _) (OSRule (Just osType) (Just verPattern) (Just osArch)) =
+    osType == currentOSType && osVer =~ (verPattern :: String) && osArch == currentOSArch
+
+processRules :: RuleContext -> [Rule] -> Bool
+processRules _ [] = True
+processRules ctx rules = flip execState False $
+    forM rules $ \rule ->
+        put (processRule ctx rule)
