@@ -7,6 +7,7 @@ import           Imports
 import           AppState
 
 import           Data.Minecraft.VersionManifest
+import           Data.Table
 import           Data.Time
 import           Options.Applicative
 import           REPL.REPLCommand               (REPLCommand (..))
@@ -78,20 +79,15 @@ listVersionsCommandProcedure opts = do
 
 showVersionList :: [MCVersion] -> AppStateT IO ()
 showVersionList mcVersions = do
-    let maxVersionTypeLength        = maximum $ map (length . show . mcVersionType) mcVersions
-        maxVersionIDLength          = maximum $ map (length . mcVersionID) mcVersions
-        maxVersionReleaseDateLength = maximum $ map (length . formatReleaseTime . mcVersionReleaseTime) mcVersions
+    let table = createTable3 "Type" "ID" "Release Date" $
+            addDataList $
+                flip map mcVersions $ \mcv ->
+                    ( mcVersionType mcv
+                    , StringData (mcVersionID mcv)
+                    , StringData (formatReleaseTime $ mcVersionReleaseTime mcv)
+                    )
 
-        formatter = printf "| %%-%ds | %%-%ds | %%-%ds |"
-            maxVersionTypeLength maxVersionIDLength maxVersionReleaseDateLength
-
-    putStrLn' (printf formatter ("Type" :: String) ("ID" :: String) ("Release Date" :: String))
-
-    putStrLn' (printf "| %s | %s | %s |" (replicate maxVersionTypeLength '-')
-        (replicate maxVersionIDLength '-') (replicate maxVersionReleaseDateLength '-'))
-
-    forM_ mcVersions $ \(MCVersion vID vType _ _ vReleaseTime) ->
-        putStrLn' (printf formatter (show vType) vID (formatReleaseTime vReleaseTime))
+    putStrLn' (show table)
 
     where
         formatReleaseTime = formatTime defaultTimeLocale "%d %b %Y %Z"
