@@ -21,6 +21,7 @@ source-repository head
 library
   exposed-modules:
       Control.Either.Extra
+      Data.Minecraft.AssetIndex
       Data.Minecraft.ClientJson
       Data.Minecraft.VersionManifest
       Data.String.Extra

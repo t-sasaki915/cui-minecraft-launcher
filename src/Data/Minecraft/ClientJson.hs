@@ -245,8 +245,8 @@ instance FromJSON ClientJson where
 parseClientJson :: ByteString -> Either String ClientJson
 parseClientJson rawJson =
     case eitherDecodeStrict' rawJson of
-        Right versionManifest ->
-            Right versionManifest
+        Right clientJson ->
+            Right clientJson
 
         Left err ->
             Left (printf "Failed to parse client.json: %s" err)

@@ -6,19 +6,19 @@ import           AppState
 
 import           Control.Concurrent.Async       (forConcurrently_)
 import           Control.Either.Extra           (throwEither)
-import           Data.Aeson
-import qualified Data.Aeson.KeyMap              as KeyMap
 import           Data.ByteString                (ByteString)
 import qualified Data.ByteString                as BS
 import           Data.List.Extra                (chunksOf)
-import           Data.Minecraft.ClientJson
+import           Data.Maybe                     (fromMaybe)
+import           Data.Minecraft.AssetIndex
+import           Data.Minecraft.ClientJson      hiding (AssetIndex)
 import           Data.Minecraft.VersionManifest
-import           Data.Text                      (unpack)
 import           Game.Minecraft.MinecraftFiles
 import           Game.Minecraft.MojangConstants (getMinecraftAssetObjectDownloadUrl)
 import           Network.Curl                   (downloadFileFromUrl,
                                                  readBSContentFromUrl)
 import           System.Directory               (createDirectoryIfMissing)
+import           System.FilePath                (takeDirectory)
 import           System.ProgressBar
 
 createVersionDirectoryIfMissing :: MCVersionID -> AppStateT IO ()
@@ -80,33 +80,11 @@ downloadAssetIndex clientJson = do
                     putStrLn' "ERROR"
                     error (printf "Failed to download an asset index: %s" errMsg)
 
-analyseAssetHashes :: HasCallStack => ByteString -> [String]
-analyseAssetHashes assetIndexRaw = do
-    case eitherDecodeStrict' assetIndexRaw :: Either String Object of
-        Right obj ->
-            case KeyMap.lookup "objects" obj of
-                Just (Object objs) ->
-                    flip map (KeyMap.elems objs) $ \case
-                        (Object obj') ->
-                            case KeyMap.lookup "hash" obj' of
-                                Just (String hash) ->
-                                    unpack hash
-
-                                _ ->
-                                    error "Could not find a hash key in the asset index."
-
-                        _ ->
-                            error "Could not find a hash key in the asset index."
-
-                _ ->
-                    error "Could not find a objects key in the asset index."
-
-        Left errMsg ->
-            error (printf "Failed to parse the asset index: %s" errMsg)
-
-downloadAssets :: HasCallStack => [String] -> AppStateT IO ()
-downloadAssets assetHashes = do
+downloadAssetObjects :: HasCallStack => ClientJson -> AssetIndex -> AppStateT IO ()
+downloadAssetObjects clientJson assetIndex = do
     minecraftDir <- getMinecraftGameDir
+    let versionID            = clientVersionId clientJson
+        shouldMapToResources = fromMaybe False (mapToResources assetIndex)
 
     let
         progressBarStyle =
@@ -129,30 +107,35 @@ downloadAssets assetHashes = do
                 , styleClose         = "]"
                 }
 
-    assetHashesToDownload <-
-        flip filterM assetHashes $ \assetHash ->
-            let localAssetObjectPath = getMinecraftAssetObjectPath assetHash minecraftDir in
+    assetObjectsToDownload <-
+        flip filterM (getAssetObjects assetIndex) $ \(AssetObject assetFile assetHash_) ->
+            let localAssetObjectPath =
+                    if shouldMapToResources
+                        then getMinecraftResourcePath assetFile versionID minecraftDir
+                        else getMinecraftAssetObjectPath assetHash_ minecraftDir in
                 lift (doesFileExist localAssetObjectPath) <&> not
 
-    unless (null assetHashesToDownload) $ do
-        progressBar <- lift (newProgressBar progressBarStyle 10 (Progress 0 (length assetHashesToDownload) ()))
+    unless (null assetObjectsToDownload) $ do
+        progressBar <- lift (newProgressBar progressBarStyle 10 (Progress 0 (length assetObjectsToDownload) ()))
 
-        let assetChunks = chunksOf 80 assetHashesToDownload
+        let assetChunks = chunksOf 80 assetObjectsToDownload
 
         lift $ forM_ assetChunks $ \assetChunk ->
-            forConcurrently_ assetChunk $ \assetHash -> do
-                let localAssetObjectPath = getMinecraftAssetObjectPath assetHash minecraftDir
-                    assetObjectPrefixDir = getMinecraftAssetObjectPrefixDir assetHash minecraftDir
-                    assetObjectUrl = getMinecraftAssetObjectDownloadUrl assetHash
+            forConcurrently_ assetChunk $ \(AssetObject assetFile assetHash_) -> do
+                let localAssetObjectPath =
+                        if shouldMapToResources
+                            then getMinecraftResourcePath assetFile versionID minecraftDir
+                            else getMinecraftAssetObjectPath assetHash_ minecraftDir
+                    assetObjectUrl = getMinecraftAssetObjectDownloadUrl assetHash_
 
-                createDirectoryIfMissing True assetObjectPrefixDir
+                createDirectoryIfMissing True (takeDirectory localAssetObjectPath)
 
                 downloadFileFromUrl localAssetObjectPath assetObjectUrl >>= \case
                     Right () ->
                         incProgress progressBar 1
 
                     Left errMsg ->
-                        error (printf "Failed to download an asset '%s': %s." assetHash errMsg)
+                        error (printf "Failed to download an asset '%s': %s." assetHash_ errMsg)
 
 downloadClientJar :: HasCallStack => ClientJson -> AppStateT IO ()
 downloadClientJar clientJson = do
@@ -172,8 +155,6 @@ downloadClientJar clientJson = do
                 putStrLn' "ERROR"
                 error (printf "Failed to download client.jar: %s" errMsg)
 
-    return ()
-
 prepareMinecraftLaunch :: HasCallStack => MCVersionID -> AppStateT IO ()
 prepareMinecraftLaunch versionID = do
     createVersionDirectoryIfMissing versionID
@@ -181,8 +162,8 @@ prepareMinecraftLaunch versionID = do
     rawClientJson <- downloadAndReadClientJson versionID
     let clientJson = throwEither (parseClientJson rawClientJson)
 
-    assetIndex <- downloadAssetIndex clientJson
-    let assetHashes = analyseAssetHashes assetIndex
-    downloadAssets assetHashes
+    rawAssetIndex <- downloadAssetIndex clientJson
+    let assetIndex = throwEither (parseAssetIndex rawAssetIndex)
+    downloadAssetObjects clientJson assetIndex
 
     downloadClientJar clientJson

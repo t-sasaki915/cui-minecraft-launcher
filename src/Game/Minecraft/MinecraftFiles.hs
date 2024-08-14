@@ -15,6 +15,8 @@ module Game.Minecraft.MinecraftFiles
     , getVersionManifestPath
     , createMinecraftDirectoriesIfMissing
     , getMinecraftVersionDir
+    , getMinecraftResourcesDir
+    , getMinecraftResourcePath
     , getClientJsonPath
     , getClientJarPath
     ) where
@@ -86,6 +88,12 @@ createMinecraftDirectoriesIfMissing mcDir =
 
 getMinecraftVersionDir :: MCVersionID -> MinecraftGameDir -> FilePath
 getMinecraftVersionDir vID mcDir = getMinecraftVersionsDir mcDir </> vID
+
+getMinecraftResourcesDir :: MCVersionID -> MinecraftGameDir -> FilePath
+getMinecraftResourcesDir vID mcDir = getMinecraftVersionDir vID mcDir </> "resources"
+
+getMinecraftResourcePath :: String -> MCVersionID -> MinecraftGameDir -> FilePath
+getMinecraftResourcePath rPath vID mcDir = getMinecraftResourcesDir vID mcDir </> rPath
 
 getClientJsonPath :: MCVersionID -> MinecraftGameDir -> FilePath
 getClientJsonPath vID mcDir = getMinecraftVersionDir vID mcDir </> printf "%s.json" vID
