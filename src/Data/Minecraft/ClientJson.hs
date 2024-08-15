@@ -19,6 +19,7 @@ module Data.Minecraft.ClientJson
     , RuleContext (..)
     , parseClientJson
     , processRules
+    , processLibraries
     ) where
 
 import           Control.Monad                    (forM)
@@ -26,8 +27,10 @@ import           Control.Monad.Trans.State.Strict (execState, put)
 import           Data.Aeson
 import           Data.ByteString                  (ByteString)
 import           Data.Functor                     ((<&>))
+import           Data.Maybe                       (fromMaybe, maybeToList)
+import           Data.Monoid.Extra                (mwhen)
 import           Data.Text                        (unpack)
-import           System.OperatingSystem           (OSArch, OSType,
+import           System.OperatingSystem           (OSArch, OSType (..),
                                                    currentOSArch, currentOSType)
 import           Text.Printf                      (printf)
 import           Text.Regex.Posix                 ((=~))
@@ -314,3 +317,18 @@ processRules _ [] = True
 processRules ctx rules = flip execState False $
     forM rules $ \rule ->
         put (processRule ctx rule)
+
+processLibraries :: RuleContext -> [ClientLibrary] -> [LibraryArtifact]
+processLibraries ctx = concatMap $ \library ->
+    let libRules = fromMaybe [] (libraryRules library) in
+        mwhen (processRules ctx libRules) $
+            let maybeArtifact = libraryArtifact (libraryDownloads library)
+                maybeClassifier =
+                    case libraryClassifiers (libraryDownloads library) of
+                        Just classifiers ->
+                            case currentOSType of
+                                Windows -> libraryNativesWindows classifiers
+                                OSX     -> libraryNativesOSX classifiers
+                                Linux   -> libraryNativesLinux classifiers
+                        Nothing -> Nothing in
+                (maybeToList maybeArtifact ++ maybeToList maybeClassifier)

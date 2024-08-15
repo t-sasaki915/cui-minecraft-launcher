@@ -9,18 +9,16 @@ import           Control.Either.Extra           (throwEither)
 import           Data.ByteString                (ByteString)
 import qualified Data.ByteString                as BS
 import           Data.List.Extra                (chunksOf)
-import           Data.Maybe                     (fromMaybe, maybeToList)
+import           Data.Maybe                     (fromMaybe)
 import           Data.Minecraft.AssetIndex
 import           Data.Minecraft.ClientJson      hiding (AssetIndex)
 import           Data.Minecraft.VersionManifest
-import           Data.Monoid.Extra              (mwhen)
 import           Game.Minecraft.MinecraftFiles
 import           Game.Minecraft.MojangConstants (getMinecraftAssetObjectDownloadUrl)
 import           Network.Curl                   (downloadFileFromUrl,
                                                  readBSContentFromUrl)
 import           System.Directory               (createDirectoryIfMissing)
 import           System.FilePath                (takeDirectory)
-import           System.OperatingSystem
 import           System.ProgressBar
 
 progressBarStyle :: Label s -> Style s
@@ -153,20 +151,7 @@ downloadLibraries clientJson = do
             , isDemoUser = False
             , hasCustomResolution = False
             }
-
-    adoptedLibs <- fmap concat $ forM (clientLibraries clientJson) $ \library ->
-        let libRules = fromMaybe [] (libraryRules library) in return $
-            mwhen (processRules ruleContext libRules) $
-                let maybeArtifact = libraryArtifact (libraryDownloads library)
-                    maybeClassifier =
-                        case libraryClassifiers (libraryDownloads library) of
-                            Just classifiers ->
-                                case currentOSType of
-                                    Windows -> libraryNativesWindows classifiers
-                                    OSX     -> libraryNativesOSX classifiers
-                                    Linux   -> libraryNativesLinux classifiers
-                            Nothing -> Nothing in
-                    (maybeToList maybeArtifact ++ maybeToList maybeClassifier)
+        adoptedLibs = processLibraries ruleContext (clientLibraries clientJson)
 
     librariesToDownload <-
         flip filterM adoptedLibs $ \(LibraryArtifact artPath _) ->
