@@ -1,4 +1,4 @@
-module Game.CuiMinecraftLauncher.Internal.Imports
+module Imports
     ( filterM
     , foldM
     , foldM_
