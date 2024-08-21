@@ -1,5 +1,6 @@
 module System.OS.Version (OSVersion, fetchOSVersion) where
 
+import           Data.Functor         ((<&>))
 import           GHC.Stack            (HasCallStack)
 import           System.OS            (OSType (..), currentOSType)
 import           System.Process.Extra (readProcessEither)
@@ -10,7 +11,7 @@ type OSVersion = String
 
 fetchOSVersion :: HasCallStack => IO OSVersion
 fetchOSVersion = case currentOSType of
-    Windows ->
+    Windows -> do
         readProcessEither "systeminfo.exe" [] >>= \case
             Right output ->
                 let osNameLine = output =~ ("^OS Name: +Microsoft Windows .+ .+$" :: String)
@@ -21,18 +22,10 @@ fetchOSVersion = case currentOSType of
                 error (printf "Failed to fetch the version of Windows: %s" errMsg)
 
     OSX ->
-        readProcessEither "sw_vers" ["-productVersion"] >>= \case
-            Right output ->
-                return output
-
-            Left errMsg ->
-                error (printf "Failed to fetch the version of OSX: %s" errMsg)
+        readProcessEither "sw_vers" ["-productVersion"] <&>
+            either (error . printf "Failed to fetch the version of OSX: %s") id
 
     Linux ->
-        readProcessEither "uname" ["-r"] >>= \case
-            Right output ->
-                return output
-
-            Left errMsg ->
-                error (printf "Failed to fetch the version of Linux: %s" errMsg)
+        readProcessEither "uname" ["-r"] <&>
+            either (error . printf "Failed to fetch the version of Linux: %s") id
 
