@@ -12,6 +12,7 @@ module Imports
     , whenJustM
     , whenM
     , lift
+    , (&)
     , (<&>)
     , isJust
     , HasCallStack
@@ -21,7 +22,6 @@ module Imports
     , printf
     , (=~)
     , version
-    , (|>)
     ) where
 
 import           Control.Monad                (filterM, foldM, foldM_, forM,
@@ -40,6 +40,3 @@ import           Text.Printf                  (printf)
 import           Text.Regex.Posix             ((=~))
 
 import           Paths_cui_minecraft_launcher (version)
-
-(|>) :: a -> (a -> b) -> b
-(|>) = (&)
