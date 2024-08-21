@@ -11,7 +11,7 @@ type OSVersion = String
 
 fetchOSVersion :: HasCallStack => IO OSVersion
 fetchOSVersion = case currentOSType of
-    Windows -> do
+    Windows ->
         readProcessEither "systeminfo.exe" [] >>= \case
             Right output ->
                 let osNameLine = output =~ ("^OS Name: +Microsoft Windows .+ .+$" :: String)
