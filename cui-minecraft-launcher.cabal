@@ -20,6 +20,8 @@ source-repository head
 
 library
   exposed-modules:
+      Data.Minecraft.VersionManifest
+      Data.Minecraft
       Network.Curl
       System.OS.Arch
       System.OS.Version
@@ -39,6 +41,9 @@ library
     , extra ==1.7.14
     , process ==1.6.19.0
     , bytestring ==0.11.5.3
+    , time ==1.12.2
+    , directory ==1.3.8.4
+    , filepath ==1.4.300.1
   default-language: Haskell2010
   default-extensions: LambdaCase, OverloadedStrings
 
