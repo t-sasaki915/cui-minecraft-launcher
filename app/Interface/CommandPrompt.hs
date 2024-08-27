@@ -1,20 +1,48 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Interface.CommandPrompt (startCommandPrompt) where
 
-import           Internal.AppState            (AppStateT)
+import           Interface.CommandPrompt.Command             (Command (executeCommand))
+import           Interface.CommandPrompt.Command.ExitCommand (ExitCommand (ExitCommand))
+import           Internal.AppState
 
-import           Control.Monad.Extra          (whenJustM)
-import           Control.Monad.Trans.Class    (lift)
-import           Data.Version                 (showVersion)
+import           Control.Exception                           (SomeException (..),
+                                                              throw, try)
+import           Control.Monad.Extra                         (when, whenJustM)
+import           Control.Monad.Trans.Class                   (lift)
+import           Data.Version                                (showVersion)
 import           System.Console.Haskeline
-import           System.OS                    (currentOSType)
-import           Text.Printf                  (printf)
+import           System.OS                                   (currentOSType)
+import           Text.Printf                                 (printf)
+import           Text.Regex.Posix                            ((=~))
 
-import           Paths_cui_minecraft_launcher (version)
+import           Paths_cui_minecraft_launcher                (version)
 
 commandPrompt :: InputT (AppStateT IO) ()
 commandPrompt =
     whenJustM (getInputLine "cui-minecraft-launcher> ") $ \input -> do
-        outputStrLn input
+        case words input of
+            (commandLabel : commandArgs) -> do
+                let execute command = executeCommand command commandLabel commandArgs
+                    execution = case commandLabel of
+                        "exit" -> execute ExitCommand
+                        _      -> error (printf "Unknown command: %s" commandLabel)
+
+                currentAppState <- lift getAppState
+                executionResult <- lift (lift (try (runAppStateT execution currentAppState)))
+
+                case executionResult of
+                    Right ((), newState) ->
+                        lift (putAppState newState)
+
+                    Left (err :: SomeException) -> do
+                        when (show err =~ ("^Exit(Success|Failure [0-9]+)$" :: String)) $
+                            throw err
+
+                        outputStrLn (show err)
+
+            [] ->
+                return ()
 
         commandPrompt
 

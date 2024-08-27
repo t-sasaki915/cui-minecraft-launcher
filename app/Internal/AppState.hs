@@ -8,10 +8,13 @@ module Internal.AppState
     , getMinecraftDir
     , getOSVersion
     , getVersionManifest
+    , getAppState
+    , putAppState
     ) where
 
 import           Control.Monad.Trans.State.Strict (StateT, evalStateT,
-                                                   execStateT, get, runStateT)
+                                                   execStateT, get, put,
+                                                   runStateT)
 import           Data.Minecraft                   (MinecraftDir)
 import           Data.Minecraft.VersionManifest   (VersionManifest)
 import           Internal.CommandLineOption       (CommandLineOption,
@@ -51,3 +54,9 @@ getOSVersion = osVersion_ <$> get
 
 getVersionManifest :: Monad m => AppStateT m VersionManifest
 getVersionManifest = versionManifest_ <$> get
+
+getAppState :: Monad m => AppStateT m AppState
+getAppState = get
+
+putAppState :: Monad m => AppState -> AppStateT m ()
+putAppState = put
