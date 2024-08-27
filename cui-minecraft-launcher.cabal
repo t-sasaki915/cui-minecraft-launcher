@@ -50,6 +50,8 @@ library
 executable cui-minecraft-launcher-exe
   main-is: Main.hs
   other-modules:
+      Internal.AppState
+      Internal.CommandLineOption
       Paths_cui_minecraft_launcher
   autogen-modules:
       Paths_cui_minecraft_launcher
@@ -59,5 +61,7 @@ executable cui-minecraft-launcher-exe
   build-depends:
       base >=4.7 && <5
     , cui-minecraft-launcher
+    , optparse-applicative ==0.18.1.0
+    , transformers ==0.6.1.0
   default-language: Haskell2010
   default-extensions: LambdaCase, OverloadedStrings
