@@ -12,12 +12,15 @@ module Data.Minecraft.VersionManifest
     , getClientJsonUrl
     , parseVersionManifest
     , getVersionManifestUrl
+    , getLocalVersionManifestPath
     ) where
 
 import           Data.Aeson      (FromJSON (parseJSON), Value (Object, String),
                                   eitherDecodeStrict', (.:))
 import           Data.ByteString (ByteString)
+import           Data.Minecraft  (MinecraftDir)
 import           Data.Time.Clock (UTCTime)
+import           System.FilePath ((</>))
 import           Text.Printf     (printf)
 
 type MCVersionID = String
@@ -102,3 +105,6 @@ parseVersionManifest =
 
 getVersionManifestUrl :: String
 getVersionManifestUrl = "https://piston-meta.mojang.com/mc/game/version_manifest.json"
+
+getLocalVersionManifestPath :: MinecraftDir -> FilePath
+getLocalVersionManifestPath = (</> "versions" </> "version_manifest.json")
