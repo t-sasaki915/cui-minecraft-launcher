@@ -50,6 +50,7 @@ library
 executable cui-minecraft-launcher-exe
   main-is: Main.hs
   other-modules:
+      Interface.CommandPrompt
       Internal.AppState
       Internal.CommandLineOption
       Paths_cui_minecraft_launcher
@@ -66,5 +67,7 @@ executable cui-minecraft-launcher-exe
     , directory ==1.3.8.4
     , filepath ==1.4.300.1
     , bytestring ==0.11.5.3
+    , haskeline ==0.8.2.1
+    , extra ==1.7.14
   default-language: Haskell2010
   default-extensions: LambdaCase, OverloadedStrings

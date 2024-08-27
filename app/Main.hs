@@ -1,5 +1,6 @@
 module Main (main) where
 
+import           Interface.CommandPrompt        (startCommandPrompt)
 import           Internal.AppState
 import           Internal.CommandLineOption     (CommandLineOption,
                                                  getMinecraftDir_,
@@ -67,3 +68,5 @@ main = do
         minecraftDir <- getMinecraftDir
 
         lift (putStrLn (printf "Using a directory '%s'." minecraftDir))
+
+        startCommandPrompt
