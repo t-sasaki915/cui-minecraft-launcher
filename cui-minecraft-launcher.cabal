@@ -50,6 +50,8 @@ library
 executable cui-minecraft-launcher-exe
   main-is: Main.hs
   other-modules:
+      Interface.CommandPrompt.Command.ExitCommand
+      Interface.CommandPrompt.Command
       Interface.CommandPrompt
       Internal.AppState
       Internal.CommandLineOption
