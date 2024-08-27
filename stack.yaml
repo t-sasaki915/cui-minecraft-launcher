@@ -3,3 +3,6 @@ compiler: ghc-9.6.5
 
 packages:
 - .
+
+extra-deps:
+- table-layout-1.0.0.1

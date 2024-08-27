@@ -4,6 +4,7 @@ module Interface.CommandPrompt (startCommandPrompt) where
 
 import           Interface.CommandPrompt.Command             (Command (executeCommand))
 import           Interface.CommandPrompt.Command.ExitCommand (ExitCommand (ExitCommand))
+import           Interface.CommandPrompt.Command.HelpCommand (HelpCommand (HelpCommand))
 import           Internal.AppState
 
 import           Control.Exception                           (SomeException (..),
@@ -26,6 +27,7 @@ commandPrompt =
                 let execute command = executeCommand command commandLabel commandArgs
                     execution = case commandLabel of
                         "exit" -> execute ExitCommand
+                        "help" -> execute HelpCommand
                         _      -> error (printf "Unknown command: %s" commandLabel)
 
                 currentAppState <- lift getAppState
