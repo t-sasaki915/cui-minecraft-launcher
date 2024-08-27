@@ -43,7 +43,7 @@ fetchVersionManifest appOption = do
 
         Left errMsg -> do
             putStrLn "ERROR"
-            putStrLn (printf "Failed to download version_manifest.json: %s" errMsg)
+            putStrLn (printf "Failed to download VersionManifest: %s" errMsg)
 
             doesFileExist localVersionManifestPath >>= \case
                 True ->
