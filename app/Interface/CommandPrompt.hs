@@ -13,6 +13,7 @@ import           Control.Exception                                  (SomeExcepti
 import           Control.Monad.Extra                                (when,
                                                                      whenJustM)
 import           Control.Monad.Trans.Class                          (lift)
+import           Data.Char                                          (toLower)
 import           Data.Version                                       (showVersion)
 import           System.Console.Haskeline
 import           System.OS                                          (currentOSType)
@@ -27,10 +28,10 @@ commandPrompt =
         case words input of
             (commandLabel : commandArgs) -> do
                 let execute command = executeCommand command commandLabel commandArgs
-                    execution = case commandLabel of
+                    execution = case map toLower commandLabel of
                         "exit"        -> execute ExitCommand
                         "help"        -> execute HelpCommand
-                        "listVersion" -> execute ListVersionCommand
+                        "listversion" -> execute ListVersionCommand
                         _      -> error (printf "Unknown command: %s" commandLabel)
 
                 currentAppState <- lift getAppState
