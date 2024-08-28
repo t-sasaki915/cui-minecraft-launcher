@@ -20,6 +20,7 @@ source-repository head
 
 library
   exposed-modules:
+      Data.Minecraft.ClientJson
       Data.Minecraft.VersionManifest
       Data.Minecraft
       Network.Curl
@@ -58,6 +59,7 @@ executable cui-minecraft-launcher-exe
       Interface.CommandPrompt
       Internal.AppState
       Internal.CommandLineOption
+      Procedure.MinecraftLauncher.LaunchPrepare
       Paths_cui_minecraft_launcher
   autogen-modules:
       Paths_cui_minecraft_launcher
