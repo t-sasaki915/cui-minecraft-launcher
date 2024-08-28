@@ -84,10 +84,10 @@ listVersionCommandProcedure opts = do
             flip map (reverse versionsToShow) $ \mcVersion ->
                 let versionID = getMCVersionID mcVersion
                     versionType = getMCVersionType mcVersion
-                    releaseDate = formatReleaseTime (getMCVersionReleaseTime mcVersion) in
+                    releaseDate = getMCVersionReleaseTime mcVersion in
                     [ show versionType
                     , if isLatest versionID then printf "%s (latest)" versionID else versionID
-                    , releaseDate
+                    , formatReleaseTime releaseDate
                     ]
 
         table = columnHeaderTableS
