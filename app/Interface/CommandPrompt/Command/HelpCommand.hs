@@ -22,6 +22,7 @@ helpCommandProcedure _ = do
     let rgs = map rowG
             [ ["exit", "Exit the program."]
             , ["help", "Show a command list."]
+            , ["listVersion", "Show a list of available Minecraft versions."]
             ]
 
         table = columnHeaderTableS

@@ -2,22 +2,24 @@
 
 module Interface.CommandPrompt (startCommandPrompt) where
 
-import           Interface.CommandPrompt.Command             (Command (executeCommand))
-import           Interface.CommandPrompt.Command.ExitCommand (ExitCommand (ExitCommand))
-import           Interface.CommandPrompt.Command.HelpCommand (HelpCommand (HelpCommand))
+import           Interface.CommandPrompt.Command                    (Command (executeCommand))
+import           Interface.CommandPrompt.Command.ExitCommand
+import           Interface.CommandPrompt.Command.HelpCommand
+import           Interface.CommandPrompt.Command.ListVersionCommand
 import           Internal.AppState
 
-import           Control.Exception                           (SomeException (..),
-                                                              throw, try)
-import           Control.Monad.Extra                         (when, whenJustM)
-import           Control.Monad.Trans.Class                   (lift)
-import           Data.Version                                (showVersion)
+import           Control.Exception                                  (SomeException (..),
+                                                                     throw, try)
+import           Control.Monad.Extra                                (when,
+                                                                     whenJustM)
+import           Control.Monad.Trans.Class                          (lift)
+import           Data.Version                                       (showVersion)
 import           System.Console.Haskeline
-import           System.OS                                   (currentOSType)
-import           Text.Printf                                 (printf)
-import           Text.Regex.Posix                            ((=~))
+import           System.OS                                          (currentOSType)
+import           Text.Printf                                        (printf)
+import           Text.Regex.Posix                                   ((=~))
 
-import           Paths_cui_minecraft_launcher                (version)
+import           Paths_cui_minecraft_launcher                       (version)
 
 commandPrompt :: InputT (AppStateT IO) ()
 commandPrompt =
@@ -26,8 +28,9 @@ commandPrompt =
             (commandLabel : commandArgs) -> do
                 let execute command = executeCommand command commandLabel commandArgs
                     execution = case commandLabel of
-                        "exit" -> execute ExitCommand
-                        "help" -> execute HelpCommand
+                        "exit"        -> execute ExitCommand
+                        "help"        -> execute HelpCommand
+                        "listVersion" -> execute ListVersionCommand
                         _      -> error (printf "Unknown command: %s" commandLabel)
 
                 currentAppState <- lift getAppState
