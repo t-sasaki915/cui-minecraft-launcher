@@ -70,8 +70,12 @@ instance FromJSON OSRule where
     parseJSON x = fail (printf "Invalid OSRule structure: %s" (show x))
 
 data FeatureRule = FeatureRule
-    { isDemoUserRule_          :: Maybe Bool
-    , hasCustomResolutionRule_ :: Maybe Bool
+    { isDemoUserRule_              :: Maybe Bool
+    , hasCustomResolutionRule_     :: Maybe Bool
+    , hasQuickPlaysSupportRule_    :: Maybe Bool
+    , isQuickPlaySinglePlayerRule_ :: Maybe Bool
+    , isQuickPlayMultiplayerRule_  :: Maybe Bool
+    , isQuickPlayRealmsRule_       :: Maybe Bool
     }
     deriving Show
 
@@ -80,6 +84,10 @@ instance FromJSON FeatureRule where
         FeatureRule
             <$> (m .:? "is_demo_user")
             <*> (m .:? "has_custom_resolution")
+            <*> (m .:? "has_quick_plays_support")
+            <*> (m .:? "is_quick_play_singleplayer")
+            <*> (m .:? "is_quick_play_multiplayer")
+            <*> (m .:? "is_quick_play_realms")
     parseJSON x = fail (printf "Invalid FeatureRule structure: %s" (show x))
 
 data RuleValue = SingleValue String
