@@ -6,6 +6,7 @@ import           Interface.CommandPrompt.Command                    (Command (ex
 import           Interface.CommandPrompt.Command.ExitCommand
 import           Interface.CommandPrompt.Command.HelpCommand
 import           Interface.CommandPrompt.Command.ListVersionCommand
+import           Interface.CommandPrompt.Command.QuickLaunchCommand
 import           Internal.AppState
 
 import           Control.Exception                                  (SomeException (..),
@@ -32,6 +33,7 @@ commandPrompt =
                         "exit"        -> execute ExitCommand
                         "help"        -> execute HelpCommand
                         "listversion" -> execute ListVersionCommand
+                        "quicklaunch" -> execute QuickLaunchCommand
                         _      -> error (printf "Unknown command: %s" commandLabel)
 
                 currentAppState <- lift getAppState

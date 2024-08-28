@@ -53,6 +53,7 @@ executable cui-minecraft-launcher-exe
       Interface.CommandPrompt.Command.ExitCommand
       Interface.CommandPrompt.Command.HelpCommand
       Interface.CommandPrompt.Command.ListVersionCommand
+      Interface.CommandPrompt.Command.QuickLaunchCommand
       Interface.CommandPrompt.Command
       Interface.CommandPrompt
       Internal.AppState

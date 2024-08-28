@@ -23,6 +23,7 @@ helpCommandProcedure _ = do
             [ ["exit", "Exit the program."]
             , ["help", "Show a command list."]
             , ["listVersion", "Show a list of available Minecraft versions."]
+            , ["quickLaunch", "Launch a Minecraft client without making an installation."]
             ]
 
         table = columnHeaderTableS
