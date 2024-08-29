@@ -241,7 +241,7 @@ instance FromJSON ClientJson where
             <*> (m .:? "javaVersion")
             <*> (m .:  "libraries")
             <*> (m .:  "mainClass")
-    parseJSON x = fail (printf "Invalid client.json structure: %s" (show x))
+    parseJSON x = fail (printf "Invalid ClientJson structure: %s" (show x))
 
 getLocalClientJsonPath :: MinecraftDir -> MCVersion -> FilePath
 getLocalClientJsonPath mcDir mcVersion =
@@ -250,7 +250,7 @@ getLocalClientJsonPath mcDir mcVersion =
 
 parseClientJson :: ByteString -> Either String ClientJson
 parseClientJson =
-    either (Left . printf "Failed to parse client.json: %s") Right .
+    either (Left . printf "Failed to parse ClientJson: %s") Right .
         eitherDecodeStrict'
 
 getAssetVersion :: ClientJson -> AssetVersion

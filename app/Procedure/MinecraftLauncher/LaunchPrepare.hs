@@ -5,7 +5,7 @@ import           Internal.AppState              (AppStateT, getMinecraftDir)
 import           Control.Monad.Extra            (unlessM)
 import           Control.Monad.Trans.Class      (lift)
 import qualified Data.ByteString                as BS
-import           Data.Minecraft.AssetIndex      (getLocalAssetIndexPath)
+import           Data.Minecraft.AssetIndex
 import           Data.Minecraft.ClientJson
 import           Data.Minecraft.VersionManifest
 import           GHC.Stack                      (HasCallStack)
@@ -69,11 +69,22 @@ downloadAssetIndexIfMissing clientJson = do
                 error (printf "Failed to download AssetIndex: %s" errMsg)
 
 
+readAssetIndex :: HasCallStack => ClientJson -> AppStateT IO AssetIndex
+readAssetIndex clientJson = do
+    minecraftDir <- getMinecraftDir
+
+    let localAssetIndexPath = getLocalAssetIndexPath minecraftDir clientJson
+
+    rawAssetIndex <- lift (BS.readFile localAssetIndexPath)
+
+    return (either error id (parseAssetIndex rawAssetIndex))
+
 prepareMinecraftLaunch :: HasCallStack => MCVersion -> AppStateT IO ()
 prepareMinecraftLaunch mcVersion = do
     downloadClientJsonIfMissing mcVersion
     clientJson <- readClientJson mcVersion
 
     downloadAssetIndexIfMissing clientJson
+    assetIndex <- readAssetIndex clientJson
 
     return ()
