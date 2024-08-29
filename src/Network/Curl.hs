@@ -1,70 +1,40 @@
 module Network.Curl
-    ( curlExecutableName
+    ( Url
     , readContentFromUrl
     , readBSContentFromUrl
-    , downloadFileFromUrl
+    , downloadFile
     ) where
 
 import           Data.ByteString          (ByteString, pack)
 import           Data.ByteString.Internal (c2w)
-import           Data.String.Extra        (removeLastNewLine)
-import           System.Exit              (ExitCode (ExitSuccess))
-import           System.OperatingSystem   (OSType (..), currentOSType)
-import           System.Process           (proc, readCreateProcessWithExitCode)
+import           Data.Functor             ((<&>))
+import           Data.List.Extra          (dropEnd)
+import           System.OS                (OSType (..), currentOSType)
+import           System.Process.Extra     (execProcessEither, readProcessEither)
 
 type Url = String
 
-curlExecutableName :: String
-curlExecutableName = case currentOSType of
+curlExecName :: FilePath
+curlExecName = case currentOSType of
     Windows -> "curl.exe"
-    Linux   -> "curl"
     OSX     -> "curl"
+    Linux   -> "curl"
 
 readContentFromUrl :: Url -> IO (Either String String)
-readContentFromUrl url = do
-    let
-        curlArgs =
-            [ "--fail"
-            , "--silent"
-            , "--show-error"
-            , url
-            ]
-
-    (exitCode, stdout, stderr) <-
-        readCreateProcessWithExitCode
-            (proc curlExecutableName curlArgs) []
-
-    case exitCode of
-        ExitSuccess ->
-            return (Right stdout)
-
-        _ ->
-            return (Left (removeLastNewLine stderr))
+readContentFromUrl url =
+    readProcessEither curlExecName ["--fail", "--silent", "--show-error", url] <&>
+        either (Left . removeLastNewLine) Right
 
 readBSContentFromUrl :: Url -> IO (Either String ByteString)
 readBSContentFromUrl url =
-    readContentFromUrl url >>=
-        either (return . Left) (return . Right . pack . map c2w)
+    readContentFromUrl url <&> fmap (pack . map c2w)
 
-downloadFileFromUrl :: FilePath -> Url -> IO (Either String ())
-downloadFileFromUrl downloadPath url = do
-    let
-        curlArgs =
-            [ "--fail"
-            , "--silent"
-            , "--show-error"
-            , "--output"
-            , downloadPath
-            , url
-            ]
+downloadFile :: FilePath -> Url -> IO (Either String ())
+downloadFile downloadPath url =
+    execProcessEither curlExecName ["--fail", "--silent", "--show-error", "--output", downloadPath, url] <&>
+        either (Left . removeLastNewLine) Right
 
-    (exitCode, _, stderr) <-
-        readCreateProcessWithExitCode
-            (proc curlExecutableName curlArgs) []
-
-    case exitCode of
-        ExitSuccess ->
-            return (Right ())
-
-        _ ->
-            return (Left (removeLastNewLine stderr))
+removeLastNewLine :: String -> String
+removeLastNewLine str = case last str of
+    '\n' -> dropEnd 1 str
+    _    -> str

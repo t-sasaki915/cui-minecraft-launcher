@@ -1,85 +1,72 @@
 module Main (main) where
 
-import           Imports
+import           Interface.CommandPrompt        (startCommandPrompt)
+import           Internal.AppState
+import           Internal.CommandLineOption     (CommandLineOption,
+                                                 getMinecraftDir_,
+                                                 parseCommandLineOption)
 
-import           AppOption
-import           AppState
-import           REPL.REPLMain                  (replMain, replTabCompletion)
-
-import           Control.Either.Extra           (throwEither)
+import           Control.Monad.Trans.Class      (MonadTrans (lift))
 import qualified Data.ByteString                as BS
 import           Data.Minecraft.VersionManifest
-import           Data.Version                   (showVersion)
-import           Game.Minecraft.MinecraftFiles
-import           Options.Applicative
-import           System.Console.Haskeline
-import           System.Directory
-import           System.OperatingSystem         (currentOSType, fetchOSVersion)
+import           GHC.Stack                      (HasCallStack)
+import           Network.Curl                   (downloadFile)
+import           System.Directory               (createDirectoryIfMissing,
+                                                 doesFileExist)
+import           System.FilePath                (takeDirectory)
+import           System.IO                      (hFlush, stdout)
+import           System.OS                      (currentOSType)
+import           System.OS.Version              (OSVersion, fetchOSVersion)
+import           Text.Printf                    (printf)
 
-initialiseOSVersion :: HasCallStack => AppStateT IO ()
-initialiseOSVersion = do
-    putStr' "Checking OS version ..."
+checkOSVersion :: IO OSVersion
+checkOSVersion = do
+    putStr "Checking OS version ..."
+    hFlush stdout
 
-    osVer <- lift fetchOSVersion
+    osVersion <- fetchOSVersion
 
-    putStrLn' (printf "%s %s" (show currentOSType) osVer)
+    putStrLn (printf "%s %s" (show currentOSType) osVersion)
 
-    initialiseOSVersionWith osVer
+    return osVersion
 
-initialiseVersionManifest :: HasCallStack => AppStateT IO ()
-initialiseVersionManifest = do
-    minecraftDir <- getMinecraftGameDir
-    let localVersionManifestPath = getVersionManifestPath minecraftDir
+fetchVersionManifest :: HasCallStack => CommandLineOption -> IO VersionManifest
+fetchVersionManifest appOption = do
+    putStr "Updating VersionManifest ..."
+    hFlush stdout
 
-    lift fetchVersionManifestFromMojang >>= \case
-        Right versionManifestJson -> do
-            putStrLn' "Using the latest Minecraft version list."
+    let localVersionManifestPath = getLocalVersionManifestPath (getMinecraftDir_ appOption)
+    createDirectoryIfMissing True (takeDirectory localVersionManifestPath)
 
-            let versionManifest = throwEither (parseVersionManifest versionManifestJson)
-
-            whenM (lift (doesFileExist localVersionManifestPath)) $
-                lift (removeFile localVersionManifestPath)
-
-            lift (BS.writeFile localVersionManifestPath versionManifestJson)
-            initialiseVersionManifestWith versionManifest
+    downloadFile localVersionManifestPath getVersionManifestUrl >>= \case
+        Right () ->
+            putStrLn "OK"
 
         Left errMsg -> do
-            putStrLn' (printf "Failed to fetch Minecraft versions from Mojang server: %s" errMsg)
+            putStrLn "ERROR"
+            putStrLn (printf "Failed to download VersionManifest: %s" errMsg)
 
-            unlessM (lift (doesFileExist localVersionManifestPath)) $
-                error "Could not find the local VersionManifest. Please connect to the internet."
+            doesFileExist localVersionManifestPath >>= \case
+                True ->
+                    putStrLn "Using old VersionManifest instead."
 
-            putStrLn' "Using the local Minecraft version list."
+                False ->
+                    error "Could not find old VersionManifest."
 
-            versionManifestJson <- lift (BS.readFile localVersionManifestPath)
-            let versionManifest = throwEither (parseVersionManifest versionManifestJson)
-
-            initialiseVersionManifestWith versionManifest
+    rawVersionManifest <- BS.readFile localVersionManifestPath
+    return (either error id (parseVersionManifest rawVersionManifest))
 
 main :: IO ()
 main = do
-    appOptionParser <- getAppOptionParser
-    appOption <- customExecParser (prefs disambiguate)
-        (info (helper <*> appOptionParser)
-            (fullDesc <> header
-                (printf "This is cui-minecraft-launcher %s (%s) by TSasaki."
-                    (showVersion version) (show currentOSType))))
+    appOption       <- parseCommandLineOption
+    osVersion       <- checkOSVersion
+    versionManifest <- fetchVersionManifest appOption
 
-    void $ flip runAppStateT (initialAppState appOption) $ do
-        initialiseOSVersion
+    let appState = initialiseAppState osVersion versionManifest appOption
 
-        minecraftDir <- getMinecraftGameDir
-        lift (createMinecraftDirectoriesIfMissing minecraftDir)
-        putStrLn' (printf "Using '%s' as the Minecraft game directory." minecraftDir)
+    flip evalAppStateT appState $ do
+        minecraftDir <- getMinecraftDir
 
-        initialiseVersionManifest
+        lift (putStrLn (printf "Using a directory '%s'." minecraftDir))
 
-        let
-            haskelineSettings =
-                Settings
-                    { historyFile    = Nothing
-                    , complete       = completeWord Nothing " \t" replTabCompletion
-                    , autoAddHistory = True
-                    }
-
-        runInputT haskelineSettings replMain
+        startCommandPrompt

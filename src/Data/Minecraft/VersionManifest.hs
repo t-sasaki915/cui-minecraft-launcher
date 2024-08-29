@@ -1,24 +1,33 @@
 module Data.Minecraft.VersionManifest
     ( MCVersionID
-    , LatestVersions (..)
     , MCVersionType (..)
-    , MCVersion (..)
-    , VersionManifest (..)
-    , fetchVersionManifestFromMojang
+    , MCVersion
+    , VersionManifest
+    , getLatestReleaseID
+    , getLatestSnapshotID
+    , getMCVersions
+    , getMCVersionID
+    , getMCVersionType
+    , getMCVersionReleaseTime
+    , getClientJsonUrl
     , parseVersionManifest
+    , getVersionManifestUrl
+    , getLocalVersionManifestPath
     ) where
 
-import           Data.Aeson
+import           Data.Aeson      (FromJSON (parseJSON), Value (Object, String),
+                                  eitherDecodeStrict', (.:))
 import           Data.ByteString (ByteString)
+import           Data.Minecraft  (MinecraftDir)
 import           Data.Time.Clock (UTCTime)
-import           Network.Curl    (readBSContentFromUrl)
+import           System.FilePath ((</>))
 import           Text.Printf     (printf)
 
 type MCVersionID = String
 
 data LatestVersions = LatestVersions
-    { latestRelease  :: MCVersionID
-    , latestSnapshot :: MCVersionID
+    { latestRelease_  :: MCVersionID
+    , latestSnapshot_ :: MCVersionID
     }
     deriving Show
 
@@ -39,11 +48,10 @@ instance FromJSON MCVersionType where
     parseJSON x = fail (printf "Invalid MCVersionType structure: %s" (show x))
 
 data MCVersion = MCVersion
-    { mcVersionID          :: MCVersionID
-    , mcVersionType        :: MCVersionType
-    , mcVersionUrl         :: String
-    , mcVersionTime        :: UTCTime
-    , mcVersionReleaseTime :: UTCTime
+    { mcVersionID_          :: MCVersionID
+    , mcVersionType_        :: MCVersionType
+    , mcVersionReleaseTime_ :: UTCTime
+    , clientJsonUrl_        :: String
     }
     deriving Show
 
@@ -52,14 +60,13 @@ instance FromJSON MCVersion where
         MCVersion
             <$> (m .: "id")
             <*> (m .: "type")
-            <*> (m .: "url")
-            <*> (m .: "time")
             <*> (m .: "releaseTime")
+            <*> (m .: "url")
     parseJSON x = fail (printf "Invalid MCVersion structure: %s" (show x))
 
 data VersionManifest = VersionManifest
-    { latestVersions :: LatestVersions
-    , versions       :: [MCVersion]
+    { latestVersions_ :: LatestVersions
+    , mcVersions_     :: [MCVersion]
     }
     deriving Show
 
@@ -70,15 +77,34 @@ instance FromJSON VersionManifest where
             <*> (m .: "versions")
     parseJSON x = fail (printf "Invalid VersionManifest structure: %s" (show x))
 
-fetchVersionManifestFromMojang :: IO (Either String ByteString)
-fetchVersionManifestFromMojang =
-    readBSContentFromUrl "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+getLatestReleaseID :: VersionManifest -> MCVersionID
+getLatestReleaseID = latestRelease_ . latestVersions_
+
+getLatestSnapshotID :: VersionManifest -> MCVersionID
+getLatestSnapshotID = latestSnapshot_ . latestVersions_
+
+getMCVersions :: VersionManifest -> [MCVersion]
+getMCVersions = mcVersions_
+
+getMCVersionID :: MCVersion -> MCVersionID
+getMCVersionID = mcVersionID_
+
+getMCVersionType :: MCVersion -> MCVersionType
+getMCVersionType = mcVersionType_
+
+getMCVersionReleaseTime :: MCVersion -> UTCTime
+getMCVersionReleaseTime = mcVersionReleaseTime_
+
+getClientJsonUrl :: MCVersion -> String
+getClientJsonUrl = clientJsonUrl_
 
 parseVersionManifest :: ByteString -> Either String VersionManifest
-parseVersionManifest rawJson =
-    case eitherDecodeStrict' rawJson of
-        Right versionManifest ->
-            Right versionManifest
+parseVersionManifest =
+    either (Left . printf "Failed to parse VersionManifest: %s") Right .
+        eitherDecodeStrict'
 
-        Left err ->
-            Left (printf "Failed to parse version_manifest.json: %s" err)
+getVersionManifestUrl :: String
+getVersionManifestUrl = "https://piston-meta.mojang.com/mc/game/version_manifest.json"
+
+getLocalVersionManifestPath :: MinecraftDir -> FilePath
+getLocalVersionManifestPath = (</> "versions" </> "version_manifest.json")

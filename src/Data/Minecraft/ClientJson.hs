@@ -1,46 +1,42 @@
 module Data.Minecraft.ClientJson
-    ( AssetVersion
-    , JavaClass
-    , ClientArguments (..)
-    , RuleAction (..)
-    , Rule (..)
-    , OSRule (..)
-    , FeatureRule (..)
-    , ClientArgument (..)
-    , AssetIndex (..)
-    , ClientDownload (..)
-    , ClientDownloads (..)
-    , JavaVersion (..)
-    , ClientLibrary (..)
-    , LibraryDownloads (..)
-    , LibraryArtifact (..)
-    , LibraryClassifiers (..)
-    , ClientJson (..)
-    , RuleContext (..)
+    ( ClientJson
+    , getLocalClientJsonPath
     , parseClientJson
-    , processRules
-    , processLibraries
+    , getAssetVersion
+    , getAssetIndexUrl
+    , getClientVersionID
+    , getClientLibraries
+    , getLibraryArtifactPath
+    , getLibraryArtifactUrl
+    , getLocalLibraryPath
+    , RuleContext (..)
+    , filterLibraries
     ) where
 
-import           Control.Monad                    (forM)
-import           Control.Monad.Trans.State.Strict (execState, put)
+import           Control.Monad                  (forM)
+import           Control.Monad.Trans.State      (execState, put)
 import           Data.Aeson
-import           Data.ByteString                  (ByteString)
-import           Data.Functor                     ((<&>))
-import           Data.Maybe                       (fromMaybe, maybeToList)
-import           Data.Monoid.Extra                (mwhen)
-import           Data.Text                        (unpack)
-import           System.OperatingSystem           (OSArch, OSType (..),
-                                                   currentOSArch, currentOSType)
-import           Text.Printf                      (printf)
-import           Text.Regex.Posix                 ((=~))
+import           Data.ByteString                (ByteString)
+import           Data.Functor                   ((<&>))
+import           Data.Maybe                     (fromMaybe, maybeToList)
+import           Data.Minecraft                 (MinecraftDir)
+import           Data.Minecraft.VersionManifest (MCVersion, MCVersionID,
+                                                 getMCVersionID)
+import           Data.Monoid.Extra              (mwhen)
+import           Data.Text                      (unpack)
+import           System.FilePath                ((</>))
+import           System.OS                      (OSType (..), currentOSType)
+import           System.OS.Arch                 (OSArch, currentOSArch)
+import           System.OS.Version              (OSVersion)
+import           Text.Printf                    (printf)
+import           Text.Regex.Posix               ((=~))
 
 type AssetVersion = String
 type JavaClass    = String
 
 data ClientArguments = ClientArguments
-    { clientGameArguments :: [ClientArgument]
-    , clientJvmArguments  :: [ClientArgument]
+    { clientGameArguments_ :: [ClientArgument]
+    , clientJvmArguments_  :: [ClientArgument]
     }
     deriving Show
 
@@ -59,9 +55,9 @@ instance FromJSON RuleAction where
     parseJSON x = fail (printf "Invalid RuleAction structure: %s" (show x))
 
 data Rule = Rule
-    { ruleAction  :: RuleAction
-    , osRule      :: Maybe OSRule
-    , featureRule :: Maybe FeatureRule
+    { ruleAction_  :: RuleAction
+    , osRule_      :: Maybe OSRule
+    , featureRule_ :: Maybe FeatureRule
     }
     deriving Show
 
@@ -74,9 +70,9 @@ instance FromJSON Rule where
     parseJSON x = fail (printf "Invalid Rule structure: %s" (show x))
 
 data OSRule = OSRule
-    { osNameRule       :: Maybe OSType
-    , osVersionPattern :: Maybe String
-    , osArchNameRule   :: Maybe OSArch
+    { osNameRule_       :: Maybe OSType
+    , osVersionPattern_ :: Maybe String
+    , osArchNameRule_   :: Maybe OSArch
     }
     deriving Show
 
@@ -89,8 +85,12 @@ instance FromJSON OSRule where
     parseJSON x = fail (printf "Invalid OSRule structure: %s" (show x))
 
 data FeatureRule = FeatureRule
-    { isDemoUserRule          :: Maybe Bool
-    , hasCustomResolutionRule :: Maybe Bool
+    { isDemoUserRule_              :: Maybe Bool
+    , hasCustomResolutionRule_     :: Maybe Bool
+    , hasQuickPlaysSupportRule_    :: Maybe Bool
+    , isQuickPlaySinglePlayerRule_ :: Maybe Bool
+    , isQuickPlayMultiplayerRule_  :: Maybe Bool
+    , isQuickPlayRealmsRule_       :: Maybe Bool
     }
     deriving Show
 
@@ -99,6 +99,10 @@ instance FromJSON FeatureRule where
         FeatureRule
             <$> (m .:? "is_demo_user")
             <*> (m .:? "has_custom_resolution")
+            <*> (m .:? "has_quick_plays_support")
+            <*> (m .:? "is_quick_play_singleplayer")
+            <*> (m .:? "is_quick_play_multiplayer")
+            <*> (m .:? "is_quick_play_realms")
     parseJSON x = fail (printf "Invalid FeatureRule structure: %s" (show x))
 
 data RuleValue = SingleValue String
@@ -123,8 +127,8 @@ instance FromJSON ClientArgument where
     parseJSON x = fail (printf "Invalid ClientArgument structure: %s" (show x))
 
 data AssetIndex = AssetIndex
-    { assetId  :: AssetVersion
-    , assetUrl :: String
+    { assetVersion_ :: AssetVersion
+    , assetUrl_     :: String
     }
     deriving Show
 
@@ -136,7 +140,7 @@ instance FromJSON AssetIndex where
     parseJSON x = fail (printf "Invalid AssetIndex structure: %s" (show x))
 
 newtype ClientDownload = ClientDownload
-    { clientDownloadUrl :: String
+    { clientDownloadUrl_ :: String
     }
     deriving Show
 
@@ -147,7 +151,7 @@ instance FromJSON ClientDownload where
     parseJSON x = fail (printf "Invalid ClientDownload structure: %s" (show x))
 
 newtype ClientDownloads = ClientDownloads
-    { clientDownload :: ClientDownload
+    { clientDownload_ :: ClientDownload
     }
     deriving Show
 
@@ -158,8 +162,8 @@ instance FromJSON ClientDownloads where
     parseJSON x = fail (printf "Invalid ClientDownloads structure: %s" (show x))
 
 data JavaVersion = JavaVersion
-    { javaVersionComponent :: String
-    , javaMajorVersion     :: Int
+    { javaVersionComponent_ :: String
+    , javaMajorVersion_     :: Int
     }
     deriving Show
 
@@ -171,8 +175,8 @@ instance FromJSON JavaVersion where
     parseJSON x = fail (printf "Invalid JavaVersion structure: %s" (show x))
 
 data ClientLibrary = ClientLibrary
-    { libraryDownloads :: LibraryDownloads
-    , libraryRules     :: Maybe [Rule]
+    { libraryDownloads_ :: LibraryDownloads
+    , libraryRules_     :: Maybe [Rule]
     }
     deriving Show
 
@@ -184,8 +188,8 @@ instance FromJSON ClientLibrary where
     parseJSON x = fail (printf "Invalid ClientLibrary structure: %s" (show x))
 
 data LibraryDownloads = LibraryDownloads
-    { libraryArtifact    :: Maybe LibraryArtifact
-    , libraryClassifiers :: Maybe LibraryClassifiers
+    { libraryArtifact_    :: Maybe LibraryArtifact
+    , libraryClassifiers_ :: Maybe LibraryClassifiers
     }
     deriving Show
 
@@ -197,8 +201,8 @@ instance FromJSON LibraryDownloads where
     parseJSON x = fail (printf "Invalid LibraryDownloads structure: %s" (show x))
 
 data LibraryArtifact = LibraryArtifact
-    { libraryArtifactPath :: FilePath
-    , libraryArtifactUrl  :: String
+    { libraryArtifactPath_ :: FilePath
+    , libraryArtifactUrl_  :: String
     }
     deriving Show
 
@@ -210,9 +214,9 @@ instance FromJSON LibraryArtifact where
     parseJSON x = fail (printf "Invalid LibraryArtifact structure: %s" (show x))
 
 data LibraryClassifiers = LibraryClassifiers
-    { libraryNativesLinux   :: Maybe LibraryArtifact
-    , libraryNativesOSX     :: Maybe LibraryArtifact
-    , libraryNativesWindows :: Maybe LibraryArtifact
+    { libraryNativesLinux_   :: Maybe LibraryArtifact
+    , libraryNativesOSX_     :: Maybe LibraryArtifact
+    , libraryNativesWindows_ :: Maybe LibraryArtifact
     }
     deriving Show
 
@@ -225,15 +229,15 @@ instance FromJSON LibraryClassifiers where
     parseJSON x = fail (printf "Invalid LibraryClassifiers structure: %s" (show x))
 
 data ClientJson = ClientJson
-    { clientArguments       :: Maybe ClientArguments
-    , clientArgumentsLegacy :: Maybe String
-    , clientAssetIndex      :: AssetIndex
-    , clientAssets          :: AssetVersion
-    , clientVersionId       :: String
-    , clientDownloads       :: ClientDownloads
-    , clientJavaVersion     :: Maybe JavaVersion
-    , clientLibraries       :: [ClientLibrary]
-    , clientMainClass       :: JavaClass
+    { clientArguments_       :: Maybe ClientArguments
+    , clientArgumentsLegacy_ :: Maybe String
+    , clientAssetIndex_      :: AssetIndex
+    , clientAssetVersion_    :: AssetVersion
+    , clientVersionId_       :: MCVersionID
+    , clientDownloads_       :: ClientDownloads
+    , clientJavaVersion_     :: Maybe JavaVersion
+    , clientLibraries_       :: [ClientLibrary]
+    , clientMainClass_       :: JavaClass
     }
     deriving Show
 
@@ -249,86 +253,91 @@ instance FromJSON ClientJson where
             <*> (m .:? "javaVersion")
             <*> (m .:  "libraries")
             <*> (m .:  "mainClass")
-    parseJSON x = fail (printf "Invalid client.json structure: %s" (show x))
+    parseJSON x = fail (printf "Invalid ClientJson structure: %s" (show x))
+
+getLocalClientJsonPath :: MinecraftDir -> MCVersion -> FilePath
+getLocalClientJsonPath mcDir mcVersion =
+    let versionID = getMCVersionID mcVersion in
+        mcDir </> "versions" </> versionID </> printf "%s.json" versionID
 
 parseClientJson :: ByteString -> Either String ClientJson
-parseClientJson rawJson =
-    case eitherDecodeStrict' rawJson of
-        Right clientJson ->
-            Right clientJson
+parseClientJson =
+    either (Left . printf "Failed to parse ClientJson: %s") Right .
+        eitherDecodeStrict'
 
-        Left err ->
-            Left (printf "Failed to parse client.json: %s" err)
+getAssetVersion :: ClientJson -> AssetVersion
+getAssetVersion = clientAssetVersion_
+
+getAssetIndexUrl :: ClientJson -> String
+getAssetIndexUrl = assetUrl_ . clientAssetIndex_
+
+getClientVersionID :: ClientJson -> MCVersionID
+getClientVersionID = clientVersionId_
+
+getClientLibraries :: ClientJson -> [ClientLibrary]
+getClientLibraries = clientLibraries_
+
+getLibraryArtifactPath :: LibraryArtifact -> FilePath
+getLibraryArtifactPath = libraryArtifactPath_
+
+getLibraryArtifactUrl :: LibraryArtifact -> String
+getLibraryArtifactUrl = libraryArtifactUrl_
+
+getLocalLibraryPath :: MinecraftDir -> LibraryArtifact -> FilePath
+getLocalLibraryPath mcDir lib =
+    let libraryPath = getLibraryArtifactPath lib in
+        mcDir </> "libraries" </> libraryPath
 
 data RuleContext = RuleContext
-    { osVersion           :: String
-    , isDemoUser          :: Bool
-    , hasCustomResolution :: Bool
+    { osVersion               :: OSVersion
+    , isDemoUser              :: Bool
+    , hasCustomResolution     :: Bool
+    , hasQuickPlaysSupport    :: Bool
+    , isQuickPlaySinglePlayer :: Bool
+    , isQuickPlayMultiplayer  :: Bool
+    , isQuickPlayRealms       :: Bool
     }
 
-processRule :: RuleContext -> Rule -> Bool
-processRule _ (Rule Allow Nothing Nothing) =
-    True
-processRule ctx (Rule Allow (Just osrule) Nothing) =
-    processOSRule ctx osrule
-processRule ctx (Rule Allow Nothing (Just featurerule)) =
-    processFeatureRule ctx featurerule
-processRule ctx (Rule Allow (Just osrule) (Just featurerule)) =
-    processOSRule ctx osrule && processFeatureRule ctx featurerule
-processRule _ (Rule Disallow Nothing Nothing) =
-    False
-processRule ctx (Rule Disallow (Just osrule) Nothing) =
-    not (processOSRule ctx osrule)
-processRule ctx (Rule Disallow Nothing (Just featurerule)) =
-    not (processFeatureRule ctx featurerule)
-processRule ctx (Rule Disallow (Just osrule) (Just featurerule)) =
-    not (processOSRule ctx osrule && processFeatureRule ctx featurerule)
+judgeOSRule :: RuleContext -> OSRule -> Bool
+judgeOSRule ctx (OSRule mOSName mOSVersion mOSArch) =
+    maybe True (== currentOSType) mOSName &&
+    maybe True (=~ osVersion ctx) mOSVersion &&
+    maybe True (== currentOSArch) mOSArch
 
-processFeatureRule :: RuleContext -> FeatureRule -> Bool
-processFeatureRule _ (FeatureRule Nothing Nothing) =
-    True
-processFeatureRule (RuleContext _ demo _) (FeatureRule (Just demo_) Nothing) =
-    demo == demo_
-processFeatureRule (RuleContext _ _ res) (FeatureRule Nothing (Just res_)) =
-    res == res_
-processFeatureRule (RuleContext _ demo res) (FeatureRule (Just demo_) (Just res_)) =
-    demo == demo_ && res == res_
+judgeFeatureRule :: RuleContext -> FeatureRule -> Bool
+judgeFeatureRule ctx (FeatureRule demo cRes qSupport qSingle qMulti qRealms) =
+    maybe True (== isDemoUser ctx) demo &&
+    maybe True (== hasCustomResolution ctx) cRes &&
+    maybe True (== hasQuickPlaysSupport ctx) qSupport &&
+    maybe True (== isQuickPlaySinglePlayer ctx) qSingle &&
+    maybe True (== isQuickPlayMultiplayer ctx) qMulti &&
+    maybe True (== isQuickPlayRealms ctx) qRealms
 
-processOSRule :: RuleContext -> OSRule -> Bool
-processOSRule _ (OSRule Nothing Nothing Nothing) =
-    True
-processOSRule _ (OSRule (Just osType) Nothing Nothing) =
-    osType == currentOSType
-processOSRule (RuleContext osVer _ _) (OSRule Nothing (Just verPattern) Nothing) =
-    osVer =~ (verPattern :: String)
-processOSRule _ (OSRule Nothing Nothing (Just osArch)) =
-    osArch == currentOSArch
-processOSRule (RuleContext osVer _ _) (OSRule (Just osType) (Just verPattern) Nothing) =
-    osType == currentOSType && osVer =~ (verPattern :: String)
-processOSRule (RuleContext osVer _ _) (OSRule Nothing (Just verPattern) (Just osArch)) =
-    osVer =~ (verPattern :: String) && osArch == currentOSArch
-processOSRule _ (OSRule (Just osType) Nothing (Just osArch)) =
-    osType == currentOSType && osArch == currentOSArch
-processOSRule (RuleContext osVer _ _) (OSRule (Just osType) (Just verPattern) (Just osArch)) =
-    osType == currentOSType && osVer =~ (verPattern :: String) && osArch == currentOSArch
+judgeRule :: RuleContext -> Rule -> Bool
+judgeRule ctx (Rule Allow osRule featureRule) =
+    maybe True (judgeOSRule ctx) osRule &&
+    maybe True (judgeFeatureRule ctx) featureRule
+judgeRule ctx (Rule Disallow osRule featureRule) =
+    not (maybe True (judgeOSRule ctx) osRule) &&
+    not (maybe True (judgeFeatureRule ctx) featureRule)
 
-processRules :: RuleContext -> [Rule] -> Bool
-processRules _ [] = True
-processRules ctx rules = flip execState False $
+judgeRules :: RuleContext -> [Rule] -> Bool
+judgeRules _ [] = True
+judgeRules ctx rules = flip execState False $
     forM rules $ \rule ->
-        put (processRule ctx rule)
+        put (judgeRule ctx rule)
 
-processLibraries :: RuleContext -> [ClientLibrary] -> [LibraryArtifact]
-processLibraries ctx = concatMap $ \library ->
-    let libRules = fromMaybe [] (libraryRules library) in
-        mwhen (processRules ctx libRules) $
-            let maybeArtifact = libraryArtifact (libraryDownloads library)
-                maybeClassifier =
-                    case libraryClassifiers (libraryDownloads library) of
+filterLibraries :: RuleContext -> [ClientLibrary] -> [LibraryArtifact]
+filterLibraries ctx = concatMap $ \library ->
+    let libRules = fromMaybe [] (libraryRules_ library) in
+        mwhen (judgeRules ctx libRules) $
+            let mArtifact = libraryArtifact_ (libraryDownloads_ library)
+                mClassifier =
+                    case libraryClassifiers_ (libraryDownloads_ library) of
                         Just classifiers ->
                             case currentOSType of
-                                Windows -> libraryNativesWindows classifiers
-                                OSX     -> libraryNativesOSX classifiers
-                                Linux   -> libraryNativesLinux classifiers
+                                Windows -> libraryNativesWindows_ classifiers
+                                Linux   -> libraryNativesLinux_ classifiers
+                                OSX     -> libraryNativesOSX_ classifiers
                         Nothing -> Nothing in
-                (maybeToList maybeArtifact ++ maybeToList maybeClassifier)
+                (maybeToList mArtifact ++ maybeToList mClassifier)
