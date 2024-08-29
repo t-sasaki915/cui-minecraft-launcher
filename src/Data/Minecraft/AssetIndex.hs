@@ -3,10 +3,12 @@ module Data.Minecraft.AssetIndex
     , AssetIndex
     , isVirtualAsset
     , shouldMapToResources
-    , getAssets
+    , getAssetObjects
     , getAssetFilePath
     , getAssetHash
     , getLocalAssetIndexPath
+    , getAssetObjectUrl
+    , getLocalAssetObjectPath
     , parseAssetIndex
     ) where
 
@@ -17,7 +19,8 @@ import           Data.Aeson.Key             (toString)
 import qualified Data.Aeson.KeyMap          as KM
 import           Data.ByteString            (ByteString)
 import           Data.Minecraft             (MinecraftDir)
-import           Data.Minecraft.ClientJson  (ClientJson, getAssetVersion)
+import           Data.Minecraft.ClientJson  (ClientJson, getAssetVersion,
+                                             getClientVersionID)
 import           Data.Text                  (unpack)
 import           System.FilePath            ((</>))
 import           Text.Printf                (printf)
@@ -46,14 +49,35 @@ isVirtualAsset = virtualAsset_
 shouldMapToResources :: AssetIndex -> Bool
 shouldMapToResources = mapToResources_
 
-getAssets :: AssetIndex -> [AssetObject]
-getAssets = assetObjects_
+getAssetObjects :: AssetIndex -> [AssetObject]
+getAssetObjects = assetObjects_
 
 getAssetFilePath :: AssetObject -> FilePath
 getAssetFilePath = assetFilePath_
 
 getAssetHash :: AssetObject -> AssetHash
 getAssetHash = assetHash_
+
+getAssetObjectUrl :: AssetObject -> String
+getAssetObjectUrl assetObj =
+    let assetHash = getAssetHash assetObj in
+        printf "https://resources.download.minecraft.net/%s/%s" (take 2 assetHash) assetHash
+
+getLocalAssetObjectPath :: MinecraftDir -> ClientJson -> AssetIndex -> AssetObject -> FilePath
+getLocalAssetObjectPath mcDir clientJson assetIndex assetObj
+    | isVirtualAsset assetIndex =
+        let assetVersion = getAssetVersion clientJson
+            assetFilePath = getAssetFilePath assetObj in
+                mcDir </> "assets" </> "virtual" </> assetVersion </> assetFilePath
+
+    | shouldMapToResources assetIndex =
+        let clientVersion = getClientVersionID clientJson
+            assetFilePath = getAssetFilePath assetObj in
+                mcDir </> "versions" </> clientVersion </> "resources" </> assetFilePath
+
+    | otherwise =
+        let assetHash = getAssetHash assetObj in
+            mcDir </> "assets" </> "objects" </> take 2 assetHash </> assetHash
 
 data AssetIndex_ = AssetIndex_
     { virtualAsset__   :: Bool

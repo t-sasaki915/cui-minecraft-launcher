@@ -2,9 +2,13 @@ module Procedure.MinecraftLauncher.LaunchPrepare (prepareMinecraftLaunch) where
 
 import           Internal.AppState              (AppStateT, getMinecraftDir)
 
-import           Control.Monad.Extra            (unlessM)
+import           Control.Concurrent.Async       (forConcurrently_)
+import           Control.Monad.Extra            (filterM, forM_, unless,
+                                                 unlessM)
 import           Control.Monad.Trans.Class      (lift)
 import qualified Data.ByteString                as BS
+import           Data.Functor                   ((<&>))
+import           Data.List.Extra                (chunksOf)
 import           Data.Minecraft.AssetIndex
 import           Data.Minecraft.ClientJson
 import           Data.Minecraft.VersionManifest
@@ -14,6 +18,8 @@ import           System.Directory               (createDirectoryIfMissing,
                                                  doesFileExist)
 import           System.FilePath                (takeDirectory)
 import           System.IO                      (hFlush, stdout)
+import           System.ProgressBar             (incProgress)
+import           System.ProgressBar.Extra       (newSimpleProgressBar)
 import           Text.Printf                    (printf)
 
 downloadClientJsonIfMissing :: HasCallStack => MCVersion -> AppStateT IO ()
@@ -79,6 +85,36 @@ readAssetIndex clientJson = do
 
     return (either error id (parseAssetIndex rawAssetIndex))
 
+downloadAssets :: HasCallStack => ClientJson -> AssetIndex -> AppStateT IO ()
+downloadAssets clientJson assetIndex = do
+    minecraftDir <- getMinecraftDir
+
+    let assetObjects = getAssetObjects assetIndex
+        getLocalAssetObjectPath' = getLocalAssetObjectPath minecraftDir clientJson assetIndex
+
+    assetObjectsToDownload <- flip filterM assetObjects $ \assetObj ->
+        let localAssetObjectPath = getLocalAssetObjectPath' assetObj in
+            lift (doesFileExist localAssetObjectPath) <&> not
+
+    unless (null assetObjectsToDownload) $ do
+        progressBar <- lift (newSimpleProgressBar "Downloading assets" (length assetObjectsToDownload))
+
+        let assetChunks = chunksOf 50 assetObjectsToDownload
+
+        lift $ forM_ assetChunks $ \assetChunk ->
+            forConcurrently_ assetChunk $ \assetObj -> do
+                let assetObjectUrl = getAssetObjectUrl assetObj
+                    localAssetObjectPath = getLocalAssetObjectPath' assetObj
+
+                createDirectoryIfMissing True (takeDirectory localAssetObjectPath)
+
+                downloadFile localAssetObjectPath assetObjectUrl >>= \case
+                    Right () ->
+                        incProgress progressBar 1
+
+                    Left errMsg ->
+                        error (printf "Failed to download an asset object: %s" errMsg)
+
 prepareMinecraftLaunch :: HasCallStack => MCVersion -> AppStateT IO ()
 prepareMinecraftLaunch mcVersion = do
     downloadClientJsonIfMissing mcVersion
@@ -87,4 +123,4 @@ prepareMinecraftLaunch mcVersion = do
     downloadAssetIndexIfMissing clientJson
     assetIndex <- readAssetIndex clientJson
 
-    return ()
+    downloadAssets clientJson assetIndex

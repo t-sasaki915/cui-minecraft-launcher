@@ -28,6 +28,7 @@ library
       System.OS.Arch
       System.OS.Version
       System.Process.Extra
+      System.ProgressBar.Extra
       System.OS
   other-modules:
       Paths_cui_minecraft_launcher
@@ -48,6 +49,7 @@ library
     , filepath ==1.4.300.1
     , text ==2.0.2
     , transformers ==0.6.1.0
+    , terminal-progress-bar ==0.4.2
   default-language: Haskell2010
   default-extensions: LambdaCase, OverloadedStrings
 
@@ -82,5 +84,7 @@ executable cui-minecraft-launcher-exe
     , regex-posix ==0.96.0.1
     , table-layout ==1.0.0.1
     , time ==1.12.2
+    , async ==2.2.5
+    , terminal-progress-bar ==0.4.2
   default-language: Haskell2010
   default-extensions: LambdaCase, OverloadedStrings
