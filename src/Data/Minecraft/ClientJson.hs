@@ -2,6 +2,9 @@ module Data.Minecraft.ClientJson
     ( ClientJson
     , getLocalClientJsonPath
     , parseClientJson
+    , getAssetVersion
+    , getAssetIndexUrl
+    , getClientVersionID
     ) where
 
 import           Data.Aeson
@@ -249,3 +252,12 @@ parseClientJson :: ByteString -> Either String ClientJson
 parseClientJson =
     either (Left . printf "Failed to parse client.json: %s") Right .
         eitherDecodeStrict'
+
+getAssetVersion :: ClientJson -> AssetVersion
+getAssetVersion = clientAssetVersion_
+
+getAssetIndexUrl :: ClientJson -> String
+getAssetIndexUrl = assetUrl_ . clientAssetIndex_
+
+getClientVersionID :: ClientJson -> MCVersionID
+getClientVersionID = clientVersionId_

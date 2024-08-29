@@ -5,9 +5,8 @@ import           Internal.AppState              (AppStateT, getMinecraftDir)
 import           Control.Monad.Extra            (unlessM)
 import           Control.Monad.Trans.Class      (lift)
 import qualified Data.ByteString                as BS
-import           Data.Minecraft.ClientJson      (ClientJson,
-                                                 getLocalClientJsonPath,
-                                                 parseClientJson)
+import           Data.Minecraft.AssetIndex      (getLocalAssetIndexPath)
+import           Data.Minecraft.ClientJson
 import           Data.Minecraft.VersionManifest
 import           GHC.Stack                      (HasCallStack)
 import           Network.Curl                   (downloadFile)
@@ -25,7 +24,7 @@ downloadClientJsonIfMissing mcVersion = do
         localClientJsonPath = getLocalClientJsonPath minecraftDir mcVersion
 
     unlessM (lift (doesFileExist localClientJsonPath)) $ do
-        lift (putStr "Downloading client.json ...")
+        lift (putStr "Downloading ClientJson ...")
         lift (hFlush stdout)
 
         lift (createDirectoryIfMissing True (takeDirectory localClientJsonPath))
@@ -36,7 +35,7 @@ downloadClientJsonIfMissing mcVersion = do
 
             Left errMsg -> do
                 lift (putStrLn "ERROR")
-                error (printf "Failed to download client.json: %s" errMsg)
+                error (printf "Failed to download ClientJson: %s" errMsg)
 
 readClientJson :: HasCallStack => MCVersion -> AppStateT IO ClientJson
 readClientJson mcVersion = do
@@ -48,9 +47,33 @@ readClientJson mcVersion = do
 
     return (either error id (parseClientJson rawClientJson))
 
+downloadAssetIndexIfMissing :: HasCallStack => ClientJson -> AppStateT IO ()
+downloadAssetIndexIfMissing clientJson = do
+    minecraftDir <- getMinecraftDir
+
+    let assetIndexUrl = getAssetIndexUrl clientJson
+        localAssetIndexPath = getLocalAssetIndexPath minecraftDir clientJson
+
+    unlessM (lift (doesFileExist localAssetIndexPath)) $ do
+        lift (putStr "Downloading AssetIndex ...")
+        lift (hFlush stdout)
+
+        lift (createDirectoryIfMissing True (takeDirectory localAssetIndexPath))
+
+        lift (downloadFile localAssetIndexPath assetIndexUrl) >>= \case
+            Right () ->
+                lift (putStrLn "OK")
+
+            Left errMsg -> do
+                lift (putStrLn "ERROR")
+                error (printf "Failed to download AssetIndex: %s" errMsg)
+
+
 prepareMinecraftLaunch :: HasCallStack => MCVersion -> AppStateT IO ()
 prepareMinecraftLaunch mcVersion = do
     downloadClientJsonIfMissing mcVersion
     clientJson <- readClientJson mcVersion
+
+    downloadAssetIndexIfMissing clientJson
 
     return ()

@@ -20,6 +20,7 @@ source-repository head
 
 library
   exposed-modules:
+      Data.Minecraft.AssetIndex
       Data.Minecraft.ClientJson
       Data.Minecraft.VersionManifest
       Data.Minecraft
