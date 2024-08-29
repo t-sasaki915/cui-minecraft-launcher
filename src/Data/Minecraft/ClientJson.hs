@@ -9,6 +9,8 @@ module Data.Minecraft.ClientJson
     , getLibraryArtifactPath
     , getLibraryArtifactUrl
     , getLocalLibraryPath
+    , getClientJarUrl
+    , getLocalClientJarPath
     , RuleContext (..)
     , filterLibraries
     ) where
@@ -287,6 +289,14 @@ getLocalLibraryPath :: MinecraftDir -> LibraryArtifact -> FilePath
 getLocalLibraryPath mcDir lib =
     let libraryPath = getLibraryArtifactPath lib in
         mcDir </> "libraries" </> libraryPath
+
+getClientJarUrl :: ClientJson -> String
+getClientJarUrl = clientDownloadUrl_ . clientDownload_ . clientDownloads_
+
+getLocalClientJarPath :: MinecraftDir -> ClientJson -> String
+getLocalClientJarPath mcDir clientJson =
+    let clientVersion = getClientVersionID clientJson in
+        mcDir </> "versions" </> clientVersion </> printf "%s.jar" clientVersion
 
 data RuleContext = RuleContext
     { osVersion               :: OSVersion
