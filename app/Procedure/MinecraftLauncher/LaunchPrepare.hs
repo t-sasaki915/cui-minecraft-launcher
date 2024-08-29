@@ -122,5 +122,4 @@ prepareMinecraftLaunch mcVersion = do
 
     downloadAssetIndexIfMissing clientJson
     assetIndex <- readAssetIndex clientJson
-
     downloadAssets clientJson assetIndex
