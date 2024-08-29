@@ -23,8 +23,8 @@ import           System.ProgressBar             (incProgress)
 import           System.ProgressBar.Extra       (newSimpleProgressBar)
 import           Text.Printf                    (printf)
 
-downloadClientJsonIfMissing :: HasCallStack => MCVersion -> AppStateT IO ()
-downloadClientJsonIfMissing mcVersion = do
+downloadClientJson :: HasCallStack => MCVersion -> AppStateT IO ()
+downloadClientJson mcVersion = do
     minecraftDir <- getMinecraftDir
 
     let clientJsonUrl = getClientJsonUrl mcVersion
@@ -54,8 +54,29 @@ readClientJson mcVersion = do
 
     return (either error id (parseClientJson rawClientJson))
 
-downloadAssetIndexIfMissing :: HasCallStack => ClientJson -> AppStateT IO ()
-downloadAssetIndexIfMissing clientJson = do
+downloadClientJar :: HasCallStack => ClientJson -> AppStateT IO ()
+downloadClientJar clientJson = do
+    minecraftDir <- getMinecraftDir
+
+    let clientJarUrl = getClientJarUrl clientJson
+        localClientJarPath = getLocalClientJarPath minecraftDir clientJson
+
+    unlessM (lift (doesFileExist localClientJarPath)) $ do
+        lift (putStr "Downloading ClientJar ...")
+        lift (hFlush stdout)
+
+        lift (createDirectoryIfMissing True (takeDirectory localClientJarPath))
+
+        lift (downloadFile localClientJarPath clientJarUrl) >>= \case
+            Right () ->
+                lift (putStrLn "OK")
+
+            Left errMsg -> do
+                lift (putStrLn "ERROR")
+                error (printf "Failed to download ClientJar: %s" errMsg)
+
+downloadAssetIndex :: HasCallStack => ClientJson -> AppStateT IO ()
+downloadAssetIndex clientJson = do
     minecraftDir <- getMinecraftDir
 
     let assetIndexUrl = getAssetIndexUrl clientJson
@@ -156,10 +177,11 @@ downloadLibraries clientJson = do
 
 prepareMinecraftLaunch :: HasCallStack => MCVersion -> AppStateT IO ()
 prepareMinecraftLaunch mcVersion = do
-    downloadClientJsonIfMissing mcVersion
+    downloadClientJson mcVersion
     clientJson <- readClientJson mcVersion
+    downloadClientJar clientJson
 
-    downloadAssetIndexIfMissing clientJson
+    downloadAssetIndex clientJson
     assetIndex <- readAssetIndex clientJson
     downloadAssets clientJson assetIndex
 
