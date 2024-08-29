@@ -5,19 +5,31 @@ module Data.Minecraft.ClientJson
     , getAssetVersion
     , getAssetIndexUrl
     , getClientVersionID
+    , getClientLibraries
+    , getLibraryArtifactPath
+    , getLibraryArtifactUrl
+    , getLocalLibraryPath
+    , RuleContext (..)
+    , filterLibraries
     ) where
 
+import           Control.Monad                  (forM)
+import           Control.Monad.Trans.State      (execState, put)
 import           Data.Aeson
 import           Data.ByteString                (ByteString)
 import           Data.Functor                   ((<&>))
+import           Data.Maybe                     (fromMaybe, maybeToList)
 import           Data.Minecraft                 (MinecraftDir)
 import           Data.Minecraft.VersionManifest (MCVersion, MCVersionID,
                                                  getMCVersionID)
+import           Data.Monoid.Extra              (mwhen)
 import           Data.Text                      (unpack)
 import           System.FilePath                ((</>))
-import           System.OS                      (OSType)
-import           System.OS.Arch                 (OSArch)
+import           System.OS                      (OSType (..), currentOSType)
+import           System.OS.Arch                 (OSArch, currentOSArch)
+import           System.OS.Version              (OSVersion)
 import           Text.Printf                    (printf)
+import           Text.Regex.Posix               ((=~))
 
 type AssetVersion = String
 type JavaClass    = String
@@ -261,3 +273,71 @@ getAssetIndexUrl = assetUrl_ . clientAssetIndex_
 
 getClientVersionID :: ClientJson -> MCVersionID
 getClientVersionID = clientVersionId_
+
+getClientLibraries :: ClientJson -> [ClientLibrary]
+getClientLibraries = clientLibraries_
+
+getLibraryArtifactPath :: LibraryArtifact -> FilePath
+getLibraryArtifactPath = libraryArtifactPath_
+
+getLibraryArtifactUrl :: LibraryArtifact -> String
+getLibraryArtifactUrl = libraryArtifactUrl_
+
+getLocalLibraryPath :: MinecraftDir -> LibraryArtifact -> FilePath
+getLocalLibraryPath mcDir lib =
+    let libraryPath = getLibraryArtifactPath lib in
+        mcDir </> "libraries" </> libraryPath
+
+data RuleContext = RuleContext
+    { osVersion               :: OSVersion
+    , isDemoUser              :: Bool
+    , hasCustomResolution     :: Bool
+    , hasQuickPlaysSupport    :: Bool
+    , isQuickPlaySinglePlayer :: Bool
+    , isQuickPlayMultiplayer  :: Bool
+    , isQuickPlayRealms       :: Bool
+    }
+
+judgeOSRule :: RuleContext -> OSRule -> Bool
+judgeOSRule ctx (OSRule mOSName mOSVersion mOSArch) =
+    maybe True (== currentOSType) mOSName &&
+    maybe True (=~ osVersion ctx) mOSVersion &&
+    maybe True (== currentOSArch) mOSArch
+
+judgeFeatureRule :: RuleContext -> FeatureRule -> Bool
+judgeFeatureRule ctx (FeatureRule demo cRes qSupport qSingle qMulti qRealms) =
+    maybe True (== isDemoUser ctx) demo &&
+    maybe True (== hasCustomResolution ctx) cRes &&
+    maybe True (== hasQuickPlaysSupport ctx) qSupport &&
+    maybe True (== isQuickPlaySinglePlayer ctx) qSingle &&
+    maybe True (== isQuickPlayMultiplayer ctx) qMulti &&
+    maybe True (== isQuickPlayRealms ctx) qRealms
+
+judgeRule :: RuleContext -> Rule -> Bool
+judgeRule ctx (Rule Allow osRule featureRule) =
+    maybe True (judgeOSRule ctx) osRule &&
+    maybe True (judgeFeatureRule ctx) featureRule
+judgeRule ctx (Rule Disallow osRule featureRule) =
+    not (maybe True (judgeOSRule ctx) osRule) &&
+    not (maybe True (judgeFeatureRule ctx) featureRule)
+
+judgeRules :: RuleContext -> [Rule] -> Bool
+judgeRules _ [] = True
+judgeRules ctx rules = flip execState False $
+    forM rules $ \rule ->
+        put (judgeRule ctx rule)
+
+filterLibraries :: RuleContext -> [ClientLibrary] -> [LibraryArtifact]
+filterLibraries ctx = concatMap $ \library ->
+    let libRules = fromMaybe [] (libraryRules_ library) in
+        mwhen (judgeRules ctx libRules) $
+            let mArtifact = libraryArtifact_ (libraryDownloads_ library)
+                mClassifier =
+                    case libraryClassifiers_ (libraryDownloads_ library) of
+                        Just classifiers ->
+                            case currentOSType of
+                                Windows -> libraryNativesWindows_ classifiers
+                                Linux   -> libraryNativesLinux_ classifiers
+                                OSX     -> libraryNativesOSX_ classifiers
+                        Nothing -> Nothing in
+                (maybeToList mArtifact ++ maybeToList mClassifier)

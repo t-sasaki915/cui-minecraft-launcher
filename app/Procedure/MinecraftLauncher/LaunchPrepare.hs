@@ -1,6 +1,7 @@
 module Procedure.MinecraftLauncher.LaunchPrepare (prepareMinecraftLaunch) where
 
-import           Internal.AppState              (AppStateT, getMinecraftDir)
+import           Internal.AppState              (AppStateT, getMinecraftDir,
+                                                 getOSVersion)
 
 import           Control.Concurrent.Async       (forConcurrently_)
 import           Control.Monad.Extra            (filterM, forM_, unless,
@@ -115,6 +116,44 @@ downloadAssets clientJson assetIndex = do
                     Left errMsg ->
                         error (printf "Failed to download an asset object: %s" errMsg)
 
+downloadLibraries :: HasCallStack => ClientJson -> AppStateT IO ()
+downloadLibraries clientJson = do
+    minecraftDir <- getMinecraftDir
+    osVer <- getOSVersion
+
+    let ruleContext =
+            RuleContext
+                { osVersion = osVer
+                , isDemoUser = False
+                , hasCustomResolution = False
+                , hasQuickPlaysSupport = False
+                , isQuickPlaySinglePlayer = False
+                , isQuickPlayMultiplayer = False
+                , isQuickPlayRealms = False
+                }
+        clientLibraries = getClientLibraries clientJson
+        adoptedLibraries = filterLibraries ruleContext clientLibraries
+
+    librariesToDownload <- flip filterM adoptedLibraries $ \lib ->
+        let localLibraryPath = getLocalLibraryPath minecraftDir lib in
+            lift (doesFileExist localLibraryPath) <&> not
+
+    unless (null librariesToDownload) $ do
+        progressBar <- lift (newSimpleProgressBar "Downloading libraries" (length librariesToDownload))
+
+        lift $ forConcurrently_ librariesToDownload $ \lib -> do
+            let libraryUrl = getLibraryArtifactUrl lib
+                localLibraryPath = getLocalLibraryPath minecraftDir lib
+
+            createDirectoryIfMissing True (takeDirectory localLibraryPath)
+
+            downloadFile localLibraryPath libraryUrl >>= \case
+                Right () ->
+                    incProgress progressBar 1
+
+                Left errMsg ->
+                    error (printf "Failed to download a library: %s" errMsg)
+
 prepareMinecraftLaunch :: HasCallStack => MCVersion -> AppStateT IO ()
 prepareMinecraftLaunch mcVersion = do
     downloadClientJsonIfMissing mcVersion
@@ -123,3 +162,5 @@ prepareMinecraftLaunch mcVersion = do
     downloadAssetIndexIfMissing clientJson
     assetIndex <- readAssetIndex clientJson
     downloadAssets clientJson assetIndex
+
+    downloadLibraries clientJson
