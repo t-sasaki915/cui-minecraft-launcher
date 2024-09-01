@@ -3,16 +3,17 @@
 
 module Interface.CommandPrompt.Command.ListVersionCommand (ListVersionCommand (ListVersionCommand)) where
 
-import           Interface.CommandPrompt.Command (Command (..))
-import           Internal.AppState               (AppStateT, getVersionManifest)
+import           Interface.CommandPrompt.Command  (Command (..))
+import           Internal.AppState                (AppStateT,
+                                                   getVersionManifest)
 
-import           Control.Monad.Trans.Class       (lift)
-import           Data.Minecraft.VersionManifest
-import           Data.Time                       (UTCTime, defaultTimeLocale,
-                                                  formatTime)
+import           Control.Monad.Trans.Class        (lift)
+import           Data.Minecraft.VersionManifestV2
+import           Data.Time                        (UTCTime, defaultTimeLocale,
+                                                   formatTime)
 import           Options.Applicative
 import           Text.Layout.Table
-import           Text.Printf                     (printf)
+import           Text.Printf                      (printf)
 
 data ListVersionCommand = ListVersionCommand
                         | ListVersionCommandOptions

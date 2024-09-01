@@ -16,7 +16,7 @@ import           Control.Monad.Trans.State.Strict (StateT, evalStateT,
                                                    execStateT, get, put,
                                                    runStateT)
 import           Data.Minecraft                   (MinecraftDir)
-import           Data.Minecraft.VersionManifest   (VersionManifest)
+import           Data.Minecraft.VersionManifestV2 (VersionManifestV2)
 import           Internal.CommandLineOption       (CommandLineOption,
                                                    getMinecraftDir_)
 import           System.OS.Version                (OSVersion)
@@ -35,10 +35,10 @@ evalAppStateT = evalStateT
 data AppState = AppState
     { minecraftDir_    :: MinecraftDir
     , osVersion_       :: OSVersion
-    , versionManifest_ :: VersionManifest
+    , versionManifest_ :: VersionManifestV2
     }
 
-initialiseAppState :: OSVersion -> VersionManifest -> CommandLineOption -> AppState
+initialiseAppState :: OSVersion -> VersionManifestV2 -> CommandLineOption -> AppState
 initialiseAppState osVersion versionManifest appOption =
     AppState
         { minecraftDir_    = getMinecraftDir_ appOption
@@ -52,7 +52,7 @@ getMinecraftDir = minecraftDir_ <$> get
 getOSVersion :: Monad m => AppStateT m OSVersion
 getOSVersion = osVersion_ <$> get
 
-getVersionManifest :: Monad m => AppStateT m VersionManifest
+getVersionManifest :: Monad m => AppStateT m VersionManifestV2
 getVersionManifest = versionManifest_ <$> get
 
 getAppState :: Monad m => AppStateT m AppState

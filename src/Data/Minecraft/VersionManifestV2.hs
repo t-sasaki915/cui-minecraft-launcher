@@ -1,8 +1,8 @@
-module Data.Minecraft.VersionManifest
+module Data.Minecraft.VersionManifestV2
     ( MCVersionID
     , MCVersionType (..)
     , MCVersion
-    , VersionManifest
+    , VersionManifestV2
     , getLatestReleaseID
     , getLatestSnapshotID
     , getMCVersions
@@ -10,9 +10,9 @@ module Data.Minecraft.VersionManifest
     , getMCVersionType
     , getMCVersionReleaseTime
     , getClientJsonUrl
-    , parseVersionManifest
-    , getVersionManifestUrl
-    , getLocalVersionManifestPath
+    , parseVersionManifestV2
+    , getVersionManifestV2Url
+    , getLocalVersionManifestV2Path
     ) where
 
 import           Data.Aeson      (FromJSON (parseJSON), Value (Object, String),
@@ -52,6 +52,7 @@ data MCVersion = MCVersion
     , mcVersionType_        :: MCVersionType
     , mcVersionReleaseTime_ :: UTCTime
     , clientJsonUrl_        :: String
+    , clientJsonSha1_       :: String
     }
     deriving Show
 
@@ -62,28 +63,29 @@ instance FromJSON MCVersion where
             <*> (m .: "type")
             <*> (m .: "releaseTime")
             <*> (m .: "url")
+            <*> (m .: "sha1")
     parseJSON x = fail (printf "Invalid MCVersion structure: %s" (show x))
 
-data VersionManifest = VersionManifest
+data VersionManifestV2 = VersionManifestV2
     { latestVersions_ :: LatestVersions
     , mcVersions_     :: [MCVersion]
     }
     deriving Show
 
-instance FromJSON VersionManifest where
+instance FromJSON VersionManifestV2 where
     parseJSON (Object m) =
-        VersionManifest
+        VersionManifestV2
             <$> (m .: "latest")
             <*> (m .: "versions")
     parseJSON x = fail (printf "Invalid VersionManifest structure: %s" (show x))
 
-getLatestReleaseID :: VersionManifest -> MCVersionID
+getLatestReleaseID :: VersionManifestV2 -> MCVersionID
 getLatestReleaseID = latestRelease_ . latestVersions_
 
-getLatestSnapshotID :: VersionManifest -> MCVersionID
+getLatestSnapshotID :: VersionManifestV2 -> MCVersionID
 getLatestSnapshotID = latestSnapshot_ . latestVersions_
 
-getMCVersions :: VersionManifest -> [MCVersion]
+getMCVersions :: VersionManifestV2 -> [MCVersion]
 getMCVersions = mcVersions_
 
 getMCVersionID :: MCVersion -> MCVersionID
@@ -98,13 +100,13 @@ getMCVersionReleaseTime = mcVersionReleaseTime_
 getClientJsonUrl :: MCVersion -> String
 getClientJsonUrl = clientJsonUrl_
 
-parseVersionManifest :: ByteString -> Either String VersionManifest
-parseVersionManifest =
-    either (Left . printf "Failed to parse VersionManifest: %s") Right .
+parseVersionManifestV2 :: ByteString -> Either String VersionManifestV2
+parseVersionManifestV2 =
+    either (Left . printf "Failed to parse VersionManifestV2: %s") Right .
         eitherDecodeStrict'
 
-getVersionManifestUrl :: String
-getVersionManifestUrl = "https://piston-meta.mojang.com/mc/game/version_manifest.json"
+getVersionManifestV2Url :: String
+getVersionManifestV2Url = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
-getLocalVersionManifestPath :: MinecraftDir -> FilePath
-getLocalVersionManifestPath = (</> "versions" </> "version_manifest.json")
+getLocalVersionManifestV2Path :: MinecraftDir -> FilePath
+getLocalVersionManifestV2Path = (</> "versions" </> "version_manifest_v2.json")

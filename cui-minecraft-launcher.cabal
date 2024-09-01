@@ -22,7 +22,7 @@ library
   exposed-modules:
       Data.Minecraft.AssetIndex
       Data.Minecraft.ClientJson
-      Data.Minecraft.VersionManifest
+      Data.Minecraft.VersionManifestV2
       Data.Minecraft
       Network.Curl
       System.OS.Arch
@@ -86,5 +86,6 @@ executable cui-minecraft-launcher-exe
     , time ==1.12.2
     , async ==2.2.5
     , terminal-progress-bar ==0.4.2
+    , cryptohash-sha1 ==0.11.101.0
   default-language: Haskell2010
   default-extensions: LambdaCase, OverloadedStrings

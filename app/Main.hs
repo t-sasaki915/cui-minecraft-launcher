@@ -1,23 +1,23 @@
 module Main (main) where
 
-import           Interface.CommandPrompt        (startCommandPrompt)
+import           Interface.CommandPrompt          (startCommandPrompt)
 import           Internal.AppState
-import           Internal.CommandLineOption     (CommandLineOption,
-                                                 getMinecraftDir_,
-                                                 parseCommandLineOption)
+import           Internal.CommandLineOption       (CommandLineOption,
+                                                   getMinecraftDir_,
+                                                   parseCommandLineOption)
 
-import           Control.Monad.Trans.Class      (MonadTrans (lift))
-import qualified Data.ByteString                as BS
-import           Data.Minecraft.VersionManifest
-import           GHC.Stack                      (HasCallStack)
-import           Network.Curl                   (downloadFile)
-import           System.Directory               (createDirectoryIfMissing,
-                                                 doesFileExist)
-import           System.FilePath                (takeDirectory)
-import           System.IO                      (hFlush, stdout)
-import           System.OS                      (currentOSType)
-import           System.OS.Version              (OSVersion, fetchOSVersion)
-import           Text.Printf                    (printf)
+import           Control.Monad.Trans.Class        (MonadTrans (lift))
+import qualified Data.ByteString                  as BS
+import           Data.Minecraft.VersionManifestV2
+import           GHC.Stack                        (HasCallStack)
+import           Network.Curl                     (downloadFile)
+import           System.Directory                 (createDirectoryIfMissing,
+                                                   doesFileExist)
+import           System.FilePath                  (takeDirectory)
+import           System.IO                        (hFlush, stdout)
+import           System.OS                        (currentOSType)
+import           System.OS.Version                (OSVersion, fetchOSVersion)
+import           Text.Printf                      (printf)
 
 checkOSVersion :: IO OSVersion
 checkOSVersion = do
@@ -30,15 +30,15 @@ checkOSVersion = do
 
     return osVersion
 
-fetchVersionManifest :: HasCallStack => CommandLineOption -> IO VersionManifest
+fetchVersionManifest :: HasCallStack => CommandLineOption -> IO VersionManifestV2
 fetchVersionManifest appOption = do
     putStr "Updating VersionManifest ..."
     hFlush stdout
 
-    let localVersionManifestPath = getLocalVersionManifestPath (getMinecraftDir_ appOption)
+    let localVersionManifestPath = getLocalVersionManifestV2Path (getMinecraftDir_ appOption)
     createDirectoryIfMissing True (takeDirectory localVersionManifestPath)
 
-    downloadFile localVersionManifestPath getVersionManifestUrl >>= \case
+    downloadFile localVersionManifestPath getVersionManifestV2Url >>= \case
         Right () ->
             putStrLn "OK"
 
@@ -54,7 +54,7 @@ fetchVersionManifest appOption = do
                     error "Could not find old VersionManifest."
 
     rawVersionManifest <- BS.readFile localVersionManifestPath
-    return (either error id (parseVersionManifest rawVersionManifest))
+    return (either error id (parseVersionManifestV2 rawVersionManifest))
 
 main :: IO ()
 main = do

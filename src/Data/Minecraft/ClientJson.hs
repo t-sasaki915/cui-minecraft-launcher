@@ -15,23 +15,23 @@ module Data.Minecraft.ClientJson
     , filterLibraries
     ) where
 
-import           Control.Monad                  (forM)
-import           Control.Monad.Trans.State      (execState, put)
+import           Control.Monad                    (forM)
+import           Control.Monad.Trans.State        (execState, put)
 import           Data.Aeson
-import           Data.ByteString                (ByteString)
-import           Data.Functor                   ((<&>))
-import           Data.Maybe                     (fromMaybe, maybeToList)
-import           Data.Minecraft                 (MinecraftDir)
-import           Data.Minecraft.VersionManifest (MCVersion, MCVersionID,
-                                                 getMCVersionID)
-import           Data.Monoid.Extra              (mwhen)
-import           Data.Text                      (unpack)
-import           System.FilePath                ((</>))
-import           System.OS                      (OSType (..), currentOSType)
-import           System.OS.Arch                 (OSArch, currentOSArch)
-import           System.OS.Version              (OSVersion)
-import           Text.Printf                    (printf)
-import           Text.Regex.Posix               ((=~))
+import           Data.ByteString                  (ByteString)
+import           Data.Functor                     ((<&>))
+import           Data.Maybe                       (fromMaybe, maybeToList)
+import           Data.Minecraft                   (MinecraftDir)
+import           Data.Minecraft.VersionManifestV2 (MCVersion, MCVersionID,
+                                                   getMCVersionID)
+import           Data.Monoid.Extra                (mwhen)
+import           Data.Text                        (unpack)
+import           System.FilePath                  ((</>))
+import           System.OS                        (OSType (..), currentOSType)
+import           System.OS.Arch                   (OSArch, currentOSArch)
+import           System.OS.Version                (OSVersion)
+import           Text.Printf                      (printf)
+import           Text.Regex.Posix                 ((=~))
 
 type AssetVersion = String
 type JavaClass    = String

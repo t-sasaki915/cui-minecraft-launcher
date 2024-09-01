@@ -9,7 +9,7 @@ import           Procedure.MinecraftLauncher.LaunchPrepare (prepareMinecraftLaun
 
 import           Control.Monad.Trans.Class                 (lift)
 import           Data.List                                 (find)
-import           Data.Minecraft.VersionManifest
+import           Data.Minecraft.VersionManifestV2
 import           Options.Applicative
 import           Text.Printf                               (printf)
 
