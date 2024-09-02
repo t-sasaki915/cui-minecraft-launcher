@@ -10,6 +10,7 @@ module Data.Minecraft.VersionManifestV2
     , getMCVersionType
     , getMCVersionReleaseTime
     , getClientJsonUrl
+    , getClientJsonSha1
     , parseVersionManifestV2
     , getVersionManifestV2Url
     , getLocalVersionManifestV2Path
@@ -99,6 +100,9 @@ getMCVersionReleaseTime = mcVersionReleaseTime_
 
 getClientJsonUrl :: MCVersion -> String
 getClientJsonUrl = clientJsonUrl_
+
+getClientJsonSha1 :: MCVersion -> String
+getClientJsonSha1 = clientJsonSha1_
 
 parseVersionManifestV2 :: ByteString -> Either String VersionManifestV2
 parseVersionManifestV2 =

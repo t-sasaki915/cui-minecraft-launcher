@@ -4,12 +4,15 @@ module Data.Minecraft.ClientJson
     , parseClientJson
     , getAssetVersion
     , getAssetIndexUrl
+    , getAssetIndexSha1
     , getClientVersionID
     , getClientLibraries
     , getLibraryArtifactPath
     , getLibraryArtifactUrl
+    , getLibraryArtifactSha1
     , getLocalLibraryPath
     , getClientJarUrl
+    , getClientJarSha1
     , getLocalClientJarPath
     , RuleContext (..)
     , filterLibraries
@@ -129,8 +132,9 @@ instance FromJSON ClientArgument where
     parseJSON x = fail (printf "Invalid ClientArgument structure: %s" (show x))
 
 data AssetIndex = AssetIndex
-    { assetVersion_ :: AssetVersion
-    , assetUrl_     :: String
+    { assetVersion_   :: AssetVersion
+    , assetIndexUrl_  :: String
+    , assetIndexSha1_ :: String
     }
     deriving Show
 
@@ -139,10 +143,12 @@ instance FromJSON AssetIndex where
         AssetIndex
             <$> (m .: "id")
             <*> (m .: "url")
+            <*> (m .: "sha1")
     parseJSON x = fail (printf "Invalid AssetIndex structure: %s" (show x))
 
-newtype ClientDownload = ClientDownload
-    { clientDownloadUrl_ :: String
+data ClientDownload = ClientDownload
+    { clientDownloadUrl_  :: String
+    , clientDownloadSha1_ :: String
     }
     deriving Show
 
@@ -150,6 +156,7 @@ instance FromJSON ClientDownload where
     parseJSON (Object m) =
         ClientDownload
             <$> (m .: "url")
+            <*> (m .: "sha1")
     parseJSON x = fail (printf "Invalid ClientDownload structure: %s" (show x))
 
 newtype ClientDownloads = ClientDownloads
@@ -205,6 +212,7 @@ instance FromJSON LibraryDownloads where
 data LibraryArtifact = LibraryArtifact
     { libraryArtifactPath_ :: FilePath
     , libraryArtifactUrl_  :: String
+    , libraryArtifactSha1_ :: String
     }
     deriving Show
 
@@ -213,6 +221,7 @@ instance FromJSON LibraryArtifact where
         LibraryArtifact
             <$> (m .: "path")
             <*> (m .: "url")
+            <*> (m .: "sha1")
     parseJSON x = fail (printf "Invalid LibraryArtifact structure: %s" (show x))
 
 data LibraryClassifiers = LibraryClassifiers
@@ -271,7 +280,10 @@ getAssetVersion :: ClientJson -> AssetVersion
 getAssetVersion = clientAssetVersion_
 
 getAssetIndexUrl :: ClientJson -> String
-getAssetIndexUrl = assetUrl_ . clientAssetIndex_
+getAssetIndexUrl = assetIndexUrl_ . clientAssetIndex_
+
+getAssetIndexSha1 :: ClientJson -> String
+getAssetIndexSha1 = assetIndexSha1_ . clientAssetIndex_
 
 getClientVersionID :: ClientJson -> MCVersionID
 getClientVersionID = clientVersionId_
@@ -285,6 +297,9 @@ getLibraryArtifactPath = libraryArtifactPath_
 getLibraryArtifactUrl :: LibraryArtifact -> String
 getLibraryArtifactUrl = libraryArtifactUrl_
 
+getLibraryArtifactSha1 :: LibraryArtifact -> String
+getLibraryArtifactSha1 = libraryArtifactSha1_
+
 getLocalLibraryPath :: MinecraftDir -> LibraryArtifact -> FilePath
 getLocalLibraryPath mcDir lib =
     let libraryPath = getLibraryArtifactPath lib in
@@ -292,6 +307,9 @@ getLocalLibraryPath mcDir lib =
 
 getClientJarUrl :: ClientJson -> String
 getClientJarUrl = clientDownloadUrl_ . clientDownload_ . clientDownloads_
+
+getClientJarSha1 :: ClientJson -> String
+getClientJarSha1 = clientDownloadSha1_ . clientDownload_ . clientDownloads_
 
 getLocalClientJarPath :: MinecraftDir -> ClientJson -> String
 getLocalClientJarPath mcDir clientJson =

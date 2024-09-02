@@ -4,9 +4,9 @@ import           Internal.AppState                (AppStateT, getMinecraftDir,
                                                    getOSVersion)
 
 import           Control.Concurrent.Async         (forConcurrently_)
-import           Control.Monad.Extra              (filterM, forM_, unless,
-                                                   unlessM)
+import           Control.Monad.Extra              (forM_, unless, when)
 import           Control.Monad.Trans.Class        (lift)
+import           Crypto.Hash.Sha1.Extra           (stringHash)
 import qualified Data.ByteString                  as BS
 import           Data.Functor                     ((<&>))
 import           Data.List.Extra                  (chunksOf)
@@ -28,9 +28,15 @@ downloadClientJson mcVersion = do
     minecraftDir <- getMinecraftDir
 
     let clientJsonUrl = getClientJsonUrl mcVersion
+        clientJsonSha1 = getClientJsonSha1 mcVersion
         localClientJsonPath = getLocalClientJsonPath minecraftDir mcVersion
 
-    unlessM (lift (doesFileExist localClientJsonPath)) $ do
+    fileExists <- lift (doesFileExist localClientJsonPath)
+    sha1Verification <- if fileExists
+        then lift (BS.readFile localClientJsonPath) <&> ((== clientJsonSha1) . stringHash)
+        else return False
+
+    when (not fileExists || not sha1Verification) $ do
         lift (putStr "Downloading ClientJson ...")
         lift (hFlush stdout)
 
@@ -59,9 +65,15 @@ downloadClientJar clientJson = do
     minecraftDir <- getMinecraftDir
 
     let clientJarUrl = getClientJarUrl clientJson
+        clientJarSha1 = getClientJarSha1 clientJson
         localClientJarPath = getLocalClientJarPath minecraftDir clientJson
 
-    unlessM (lift (doesFileExist localClientJarPath)) $ do
+    fileExists <- lift (doesFileExist localClientJarPath)
+    sha1Verification <- if fileExists
+        then lift (BS.readFile localClientJarPath) <&> ((== clientJarSha1) . stringHash)
+        else return False
+
+    when (not fileExists || not sha1Verification) $ do
         lift (putStr "Downloading ClientJar ...")
         lift (hFlush stdout)
 
@@ -80,9 +92,15 @@ downloadAssetIndex clientJson = do
     minecraftDir <- getMinecraftDir
 
     let assetIndexUrl = getAssetIndexUrl clientJson
+        assetIndexSha1 = getAssetIndexSha1 clientJson
         localAssetIndexPath = getLocalAssetIndexPath minecraftDir clientJson
 
-    unlessM (lift (doesFileExist localAssetIndexPath)) $ do
+    fileExists <- lift (doesFileExist localAssetIndexPath)
+    sha1Verification <- if fileExists
+        then lift (BS.readFile localAssetIndexPath) <&> ((== assetIndexSha1) . stringHash)
+        else return False
+
+    when (not fileExists || not sha1Verification) $ do
         lift (putStr "Downloading AssetIndex ...")
         lift (hFlush stdout)
 
@@ -112,30 +130,34 @@ downloadAssets clientJson assetIndex = do
     minecraftDir <- getMinecraftDir
 
     let assetObjects = getAssetObjects assetIndex
+        assetChunks = chunksOf 50 assetObjects
         getLocalAssetObjectPath' = getLocalAssetObjectPath minecraftDir clientJson assetIndex
 
-    assetObjectsToDownload <- flip filterM assetObjects $ \assetObj ->
-        let localAssetObjectPath = getLocalAssetObjectPath' assetObj in
-            lift (doesFileExist localAssetObjectPath) <&> not
+    progressBar <- lift (newSimpleProgressBar "Downloading assets" (length assetObjects))
 
-    unless (null assetObjectsToDownload) $ do
-        progressBar <- lift (newSimpleProgressBar "Downloading assets" (length assetObjectsToDownload))
+    lift $ forM_ assetChunks $ \assetChunk ->
+        forConcurrently_ assetChunk $ \assetObj -> do
+            let assetObjUrl = getAssetObjectUrl assetObj
+                assetObjSha1 = getAssetHash assetObj
+                localAssetObjectPath = getLocalAssetObjectPath' assetObj
 
-        let assetChunks = chunksOf 50 assetObjectsToDownload
+            fileExists <- doesFileExist localAssetObjectPath
+            sha1Verification <- if fileExists
+                then BS.readFile localAssetObjectPath <&> ((== assetObjSha1) . stringHash)
+                else return False
 
-        lift $ forM_ assetChunks $ \assetChunk ->
-            forConcurrently_ assetChunk $ \assetObj -> do
-                let assetObjectUrl = getAssetObjectUrl assetObj
-                    localAssetObjectPath = getLocalAssetObjectPath' assetObj
+            unless (not fileExists || not sha1Verification) $
+                incProgress progressBar 1
 
+            when (not fileExists || not sha1Verification) $ do
                 createDirectoryIfMissing True (takeDirectory localAssetObjectPath)
 
-                downloadFile localAssetObjectPath assetObjectUrl >>= \case
+                downloadFile localAssetObjectPath assetObjUrl >>= \case
                     Right () ->
                         incProgress progressBar 1
 
                     Left errMsg ->
-                        error (printf "Failed to download an asset object: %s" errMsg)
+                        error (printf "Failed to download an asset object '%s': %s" assetObjSha1 errMsg)
 
 downloadLibraries :: HasCallStack => ClientJson -> AppStateT IO ()
 downloadLibraries clientJson = do
@@ -155,17 +177,22 @@ downloadLibraries clientJson = do
         clientLibraries = getClientLibraries clientJson
         adoptedLibraries = filterLibraries ruleContext clientLibraries
 
-    librariesToDownload <- flip filterM adoptedLibraries $ \lib ->
-        let localLibraryPath = getLocalLibraryPath minecraftDir lib in
-            lift (doesFileExist localLibraryPath) <&> not
+    progressBar <- lift (newSimpleProgressBar "Downloading libraries" (length adoptedLibraries))
 
-    unless (null librariesToDownload) $ do
-        progressBar <- lift (newSimpleProgressBar "Downloading libraries" (length librariesToDownload))
+    lift $ forConcurrently_ adoptedLibraries $ \lib -> do
+        let libraryUrl = getLibraryArtifactUrl lib
+            librarySha1 = getLibraryArtifactSha1 lib
+            localLibraryPath = getLocalLibraryPath minecraftDir lib
 
-        lift $ forConcurrently_ librariesToDownload $ \lib -> do
-            let libraryUrl = getLibraryArtifactUrl lib
-                localLibraryPath = getLocalLibraryPath minecraftDir lib
+        fileExists <- doesFileExist localLibraryPath
+        sha1Verification <- if fileExists
+            then BS.readFile localLibraryPath <&> ((== librarySha1) . stringHash)
+            else return False
 
+        unless (not fileExists || not sha1Verification) $
+            incProgress progressBar 1
+
+        when (not fileExists || not sha1Verification) $ do
             createDirectoryIfMissing True (takeDirectory localLibraryPath)
 
             downloadFile localLibraryPath libraryUrl >>= \case
@@ -173,7 +200,7 @@ downloadLibraries clientJson = do
                     incProgress progressBar 1
 
                 Left errMsg ->
-                    error (printf "Failed to download a library: %s" errMsg)
+                    error (printf "Failed to download a library '%s': %s" localLibraryPath errMsg)
 
 prepareMinecraftLaunch :: HasCallStack => MCVersion -> AppStateT IO ()
 prepareMinecraftLaunch mcVersion = do
