@@ -1,6 +1,6 @@
 {-# LANGUAGE NoOverloadedStrings #-}
 
-module Interface.CommandPrompt.Command.HelpCommand (HelpCommand (HelpCommand)) where
+module Procedure.CommandPrompt.Command.HelpCommand (HelpCommand (HelpCommand)) where
 
 import           Interface.CommandPrompt.Command (Command (..))
 import           Internal.AppState               (AppStateT)

@@ -58,14 +58,14 @@ library
 executable cui-minecraft-launcher-exe
   main-is: Main.hs
   other-modules:
-      Interface.CommandPrompt.Command.ExitCommand
-      Interface.CommandPrompt.Command.HelpCommand
-      Interface.CommandPrompt.Command.ListVersionCommand
-      Interface.CommandPrompt.Command.QuickLaunchCommand
       Interface.CommandPrompt.Command
       Interface.CommandPrompt
       Internal.AppState
       Internal.CommandLineOption
+      Procedure.CommandPrompt.Command.ExitCommand
+      Procedure.CommandPrompt.Command.HelpCommand
+      Procedure.CommandPrompt.Command.ListVersionCommand
+      Procedure.CommandPrompt.Command.QuickLaunchCommand
       Procedure.MinecraftLauncher.LaunchPrepare
       Paths_cui_minecraft_launcher
   autogen-modules:

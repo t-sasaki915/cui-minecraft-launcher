@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 
-module Interface.CommandPrompt.Command.QuickLaunchCommand (QuickLaunchCommand (QuickLaunchCommand)) where
+module Procedure.CommandPrompt.Command.QuickLaunchCommand (QuickLaunchCommand (QuickLaunchCommand)) where
 
 import           Interface.CommandPrompt.Command           (Command (..))
 import           Internal.AppState                         (AppStateT,
@@ -10,6 +10,7 @@ import           Procedure.MinecraftLauncher.LaunchPrepare (prepareMinecraftLaun
 import           Control.Monad.Trans.Class                 (lift)
 import           Data.List                                 (find)
 import           Data.Minecraft.VersionManifestV2
+import           GHC.Stack                                 (HasCallStack)
 import           Options.Applicative
 import           Text.Printf                               (printf)
 
@@ -40,7 +41,7 @@ quickLaunchCommandArgParser = do
                <> short 'v'
                 )
 
-quickLaunchCommandProcedure :: QuickLaunchCommand -> AppStateT IO ()
+quickLaunchCommandProcedure :: HasCallStack => QuickLaunchCommand -> AppStateT IO ()
 quickLaunchCommandProcedure opts = do
     let launchVersion = launchVersion_ opts
 
@@ -53,4 +54,4 @@ quickLaunchCommandProcedure opts = do
             prepareMinecraftLaunch mcVersion
 
         Nothing ->
-            lift (putStrLn (printf "Version '%s' is unavailable." launchVersion))
+            error (printf "Version '%s' is unavailable." launchVersion)

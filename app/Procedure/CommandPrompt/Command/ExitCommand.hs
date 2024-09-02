@@ -1,4 +1,4 @@
-module Interface.CommandPrompt.Command.ExitCommand (ExitCommand (ExitCommand)) where
+module Procedure.CommandPrompt.Command.ExitCommand (ExitCommand (ExitCommand)) where
 
 import           Interface.CommandPrompt.Command (Command (..))
 import           Internal.AppState               (AppStateT)

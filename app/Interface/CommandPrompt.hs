@@ -3,11 +3,11 @@
 module Interface.CommandPrompt (startCommandPrompt) where
 
 import           Interface.CommandPrompt.Command                    (Command (executeCommand))
-import           Interface.CommandPrompt.Command.ExitCommand
-import           Interface.CommandPrompt.Command.HelpCommand
-import           Interface.CommandPrompt.Command.ListVersionCommand
-import           Interface.CommandPrompt.Command.QuickLaunchCommand
 import           Internal.AppState
+import           Procedure.CommandPrompt.Command.ExitCommand
+import           Procedure.CommandPrompt.Command.HelpCommand
+import           Procedure.CommandPrompt.Command.ListVersionCommand
+import           Procedure.CommandPrompt.Command.QuickLaunchCommand
 
 import           Control.Exception                                  (SomeException (..),
                                                                      throw, try)

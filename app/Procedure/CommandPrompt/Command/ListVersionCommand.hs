@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 {-# LANGUAGE NoOverloadedStrings #-}
 
-module Interface.CommandPrompt.Command.ListVersionCommand (ListVersionCommand (ListVersionCommand)) where
+module Procedure.CommandPrompt.Command.ListVersionCommand (ListVersionCommand (ListVersionCommand)) where
 
 import           Interface.CommandPrompt.Command  (Command (..))
 import           Internal.AppState                (AppStateT,
