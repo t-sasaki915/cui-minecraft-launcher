@@ -14,12 +14,13 @@ currentOSArch = X86_64
 #ifdef i386_HOST_ARCH
 currentOSArch = X86
 #endif
-#ifdef arm64_HOST_ARCH
+#if defined(arm64_HOST_ARCH) || defined(aarch64_HOST_ARCH)
 currentOSArch = Arm64
 #endif
 
 instance FromJSON OSArch where
-    parseJSON (String "x86_64") = pure X86_64
-    parseJSON (String "x86")    = pure X86
-    parseJSON (String "arm64")  = pure Arm64
+    parseJSON (String "x86_64")  = pure X86_64
+    parseJSON (String "x86")     = pure X86
+    parseJSON (String "arm64")   = pure Arm64
+    parseJSON (String "aarch64") = pure Arm64
     parseJSON x = fail (printf "Invalid OSArch structure: %s" (show x))
