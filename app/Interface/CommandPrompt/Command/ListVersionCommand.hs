@@ -21,6 +21,7 @@ data ListVersionCommand = ListVersionCommand
                             , showSnapshots_ :: Bool
                             , showOldBetas_  :: Bool
                             , showOldAlphas_ :: Bool
+                            , older_         :: Bool
                             }
 
 instance Command ListVersionCommand where
@@ -54,6 +55,11 @@ listVersionCommandArgParser =
                <> long "oldalphas"
                <> short 'a'
                 )
+            <*> switch
+                ( help "Show the oldest version lastly."
+               <> long "older"
+               <> short 'o'
+                )
 
 listVersionCommandProcedure :: ListVersionCommand -> AppStateT IO ()
 listVersionCommandProcedure opts = do
@@ -61,6 +67,7 @@ listVersionCommandProcedure opts = do
         showSnapshots = showSnapshots_ opts
         showOldBetas  = showOldBetas_ opts
         showOldAlphas = showOldAlphas_ opts
+        older = older_ opts
 
     versionManifest <- getVersionManifest
     let latestRelease = getLatestReleaseID versionManifest
@@ -81,8 +88,12 @@ listVersionCommandProcedure opts = do
                         (showOldBetas && vType == OldBeta) ||
                         (showOldAlphas && vType == OldAlpha)
 
+    let sorter = if older
+        then id
+        else reverse
+
     let rgs = map rowG $
-            flip map (reverse versionsToShow) $ \mcVersion ->
+            flip map (sorter versionsToShow) $ \mcVersion ->
                 let versionID = getMCVersionID mcVersion
                     versionType = getMCVersionType mcVersion
                     releaseDate = getMCVersionReleaseTime mcVersion in
