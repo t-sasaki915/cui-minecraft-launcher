@@ -1,28 +1,30 @@
 module Procedure.MinecraftLauncher.LaunchPrepare (prepareMinecraftLaunch) where
 
-import           Internal.AppState                (AppStateT, getMinecraftDir,
-                                                   getOSVersion)
+import           Internal.AppState                              (AppStateT,
+                                                                 getMinecraftDir,
+                                                                 getOSVersion)
 
-import           Control.Concurrent.Async         (forConcurrently_)
-import           Control.Monad.Extra              (forM_, unless, when)
-import           Control.Monad.Trans.Class        (lift)
-import           Crypto.Hash.Sha1.Extra           (stringHash)
-import qualified Data.ByteString                  as BS
-import           Data.Functor                     ((<&>))
-import           Data.List.Extra                  (chunksOf)
+import           Control.Concurrent.Async                       (forConcurrently_)
+import           Control.Monad.Extra                            (forM_, unless,
+                                                                 when)
+import           Control.Monad.Trans.Class                      (lift)
+import           Crypto.Hash.Sha1.Extra                         (stringHash)
+import qualified Data.ByteString                                as BS
+import           Data.Functor                                   ((<&>))
+import           Data.List.Extra                                (chunksOf)
 import           Data.Minecraft.AssetIndex
 import           Data.Minecraft.ClientJson
 import           Data.Minecraft.VersionManifestV2
-import           GHC.Stack                        (HasCallStack)
-import           Network.Curl                     (downloadFile)
-import           System.Directory                 (createDirectoryIfMissing,
-                                                   doesFileExist)
-import           System.FilePath                  (takeDirectory)
-import           System.IO                        (hFlush, stdout)
-import           System.ProgressBar               (incProgress)
-import           System.ProgressBar.Extra         (newSimpleProgressBar)
-import           Text.Printf                      (printf)
-import Procedure.MinecraftLauncher.JavaRuntimePrepare (prepareJavaRuntime)
+import           GHC.Stack                                      (HasCallStack)
+import           Network.Curl                                   (downloadFile)
+import           Procedure.MinecraftLauncher.JavaRuntimePrepare (prepareJavaRuntime)
+import           System.Directory                               (createDirectoryIfMissing,
+                                                                 doesFileExist)
+import           System.FilePath                                (takeDirectory)
+import           System.IO                                      (hFlush, stdout)
+import           System.ProgressBar                             (incProgress)
+import           System.ProgressBar.Extra                       (newSimpleProgressBar)
+import           Text.Printf                                    (printf)
 
 downloadClientJson :: HasCallStack => MCVersion -> AppStateT IO ()
 downloadClientJson mcVersion = do
@@ -134,7 +136,7 @@ downloadAssets clientJson assetIndex = do
         assetChunks = chunksOf 50 assetObjects
         getLocalAssetObjectPath' = getLocalAssetObjectPath minecraftDir clientJson assetIndex
 
-    progressBar <- lift (newSimpleProgressBar "Downloading assets" (length assetObjects))
+    progressBar <- lift (newSimpleProgressBar "Downloading Assets" (length assetObjects))
 
     lift $ forM_ assetChunks $ \assetChunk ->
         forConcurrently_ assetChunk $ \assetObj -> do
@@ -178,7 +180,7 @@ downloadLibraries clientJson = do
         clientLibraries = getClientLibraries clientJson
         adoptedLibraries = filterLibraries ruleContext clientLibraries
 
-    progressBar <- lift (newSimpleProgressBar "Downloading libraries" (length adoptedLibraries))
+    progressBar <- lift (newSimpleProgressBar "Downloading Libraries" (length adoptedLibraries))
 
     lift $ forConcurrently_ adoptedLibraries $ \lib -> do
         let libraryUrl = getLibraryArtifactUrl lib

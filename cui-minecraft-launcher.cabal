@@ -25,6 +25,7 @@ library
       Data.Minecraft.AssetIndex
       Data.Minecraft.ClientJson
       Data.Minecraft.VersionManifestV2
+      Data.JavaRuntime
       Data.Minecraft
       Network.Curl
       System.OS.Arch
