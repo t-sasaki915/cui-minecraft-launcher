@@ -4,6 +4,7 @@ module Data.JavaRuntime.JavaRuntimeManifest
     , JavaRuntimeManifestAll
     , getJavaRuntimeManifestAllUrl
     , getLocalJavaRuntimeManifestAllPath
+    , getLocalJavaRuntimeManifestPath
     , parseJavaRuntimeManifestAll
     , getJavaRuntimeManifest
     , getJavaRuntimeManifestSha1
@@ -26,7 +27,16 @@ data JavaRuntimeVariant = JavaRuntimeAlpha
                         | JavaRuntimeGammaSnapshot
                         | JreLegacy
                         | MinecraftJavaExe
-                        deriving (Show, Eq)
+                        deriving Eq
+
+instance Show JavaRuntimeVariant where
+    show JavaRuntimeAlpha         = "java-runtime-alpha"
+    show JavaRuntimeBeta          = "java-runtime-beta"
+    show JavaRuntimeDelta         = "java-runtime-delta"
+    show JavaRuntimeGamma         = "java-runtime-gamma"
+    show JavaRuntimeGammaSnapshot = "java-runtime-gamma-snapshot"
+    show JreLegacy                = "jre-legacy"
+    show MinecraftJavaExe         = "minecraft-java-exe"
 
 instance FromJSON JavaRuntimeVariant where
     parseJSON (String "java-runtime-alpha")          = pure JavaRuntimeAlpha
@@ -115,6 +125,10 @@ getJavaRuntimeManifestAllUrl =
 getLocalJavaRuntimeManifestAllPath :: MinecraftDir -> FilePath
 getLocalJavaRuntimeManifestAllPath mcDir =
     mcDir </> "runtime" </> "all.json"
+
+getLocalJavaRuntimeManifestPath :: MinecraftDir -> JavaRuntimeVariant -> FilePath
+getLocalJavaRuntimeManifestPath mcDir variant =
+    mcDir </> "runtime" </> printf "%s.json" (show variant)
 
 parseJavaRuntimeManifestAll :: ByteString -> Either String JavaRuntimeManifestAll
 parseJavaRuntimeManifestAll =

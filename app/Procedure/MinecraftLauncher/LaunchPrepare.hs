@@ -22,6 +22,7 @@ import           System.IO                        (hFlush, stdout)
 import           System.ProgressBar               (incProgress)
 import           System.ProgressBar.Extra         (newSimpleProgressBar)
 import           Text.Printf                      (printf)
+import Procedure.MinecraftLauncher.JavaRuntimePrepare (prepareJavaRuntime)
 
 downloadClientJson :: HasCallStack => MCVersion -> AppStateT IO ()
 downloadClientJson mcVersion = do
@@ -213,3 +214,5 @@ prepareMinecraftLaunch mcVersion = do
     downloadAssets clientJson assetIndex
 
     downloadLibraries clientJson
+
+    prepareJavaRuntime (getJavaRuntimeVariant clientJson)

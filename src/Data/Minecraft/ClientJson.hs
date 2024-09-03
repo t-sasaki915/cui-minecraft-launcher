@@ -14,6 +14,7 @@ module Data.Minecraft.ClientJson
     , getClientJarUrl
     , getClientJarSha1
     , getLocalClientJarPath
+    , getJavaRuntimeVariant
     , RuleContext (..)
     , filterLibraries
     ) where
@@ -23,7 +24,7 @@ import           Control.Monad.Trans.State            (execState, put)
 import           Data.Aeson
 import           Data.ByteString                      (ByteString)
 import           Data.Functor                         ((<&>))
-import           Data.JavaRuntime.JavaRuntimeManifest (JavaRuntimeVariant)
+import           Data.JavaRuntime.JavaRuntimeManifest (JavaRuntimeVariant (JreLegacy))
 import           Data.Maybe                           (fromMaybe, maybeToList)
 import           Data.Minecraft                       (MinecraftDir)
 import           Data.Minecraft.VersionManifestV2     (MCVersion, MCVersionID,
@@ -317,6 +318,9 @@ getLocalClientJarPath :: MinecraftDir -> ClientJson -> String
 getLocalClientJarPath mcDir clientJson =
     let clientVersion = getClientVersionID clientJson in
         mcDir </> "versions" </> clientVersion </> printf "%s.jar" clientVersion
+
+getJavaRuntimeVariant :: ClientJson -> JavaRuntimeVariant
+getJavaRuntimeVariant = maybe JreLegacy javaVersionComponent_ . clientJavaVersion_
 
 data RuleContext = RuleContext
     { osVersion               :: OSVersion
