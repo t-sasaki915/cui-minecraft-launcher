@@ -67,6 +67,7 @@ executable cui-minecraft-launcher-exe
       Procedure.CommandPrompt.Command.HelpCommand
       Procedure.CommandPrompt.Command.ListVersionCommand
       Procedure.CommandPrompt.Command.QuickLaunchCommand
+      Procedure.MinecraftLauncher.JavaRuntimePrepare
       Procedure.MinecraftLauncher.LaunchPrepare
       Paths_cui_minecraft_launcher
   autogen-modules:

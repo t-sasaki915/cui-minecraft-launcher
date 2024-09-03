@@ -8,18 +8,20 @@ module Internal.AppState
     , getMinecraftDir
     , getOSVersion
     , getVersionManifest
+    , getJavaRuntimeManifestAll
     , getAppState
     , putAppState
     ) where
 
-import           Control.Monad.Trans.State.Strict (StateT, evalStateT,
-                                                   execStateT, get, put,
-                                                   runStateT)
-import           Data.Minecraft                   (MinecraftDir)
-import           Data.Minecraft.VersionManifestV2 (VersionManifestV2)
-import           Internal.CommandLineOption       (CommandLineOption,
-                                                   getMinecraftDir_)
-import           System.OS.Version                (OSVersion)
+import           Control.Monad.Trans.State.Strict     (StateT, evalStateT,
+                                                       execStateT, get, put,
+                                                       runStateT)
+import           Data.JavaRuntime.JavaRuntimeManifest (JavaRuntimeManifestAll)
+import           Data.Minecraft                       (MinecraftDir)
+import           Data.Minecraft.VersionManifestV2     (VersionManifestV2)
+import           Internal.CommandLineOption           (CommandLineOption,
+                                                       getMinecraftDir_)
+import           System.OS.Version                    (OSVersion)
 
 type AppStateT = StateT AppState
 
@@ -33,17 +35,19 @@ evalAppStateT :: Monad m => AppStateT m a -> AppState -> m a
 evalAppStateT = evalStateT
 
 data AppState = AppState
-    { minecraftDir_    :: MinecraftDir
-    , osVersion_       :: OSVersion
-    , versionManifest_ :: VersionManifestV2
+    { minecraftDir_           :: MinecraftDir
+    , osVersion_              :: OSVersion
+    , versionManifest_        :: VersionManifestV2
+    , javaRuntimeManifestAll_ :: JavaRuntimeManifestAll
     }
 
-initialiseAppState :: OSVersion -> VersionManifestV2 -> CommandLineOption -> AppState
-initialiseAppState osVersion versionManifest appOption =
+initialiseAppState :: OSVersion -> VersionManifestV2 -> JavaRuntimeManifestAll -> CommandLineOption -> AppState
+initialiseAppState osVersion versionManifest javaRuntimeManifestAll appOption =
     AppState
-        { minecraftDir_    = getMinecraftDir_ appOption
-        , osVersion_       = osVersion
-        , versionManifest_ = versionManifest
+        { minecraftDir_           = getMinecraftDir_ appOption
+        , osVersion_              = osVersion
+        , versionManifest_        = versionManifest
+        , javaRuntimeManifestAll_ = javaRuntimeManifestAll
         }
 
 getMinecraftDir :: Monad m => AppStateT m MinecraftDir
@@ -54,6 +58,9 @@ getOSVersion = osVersion_ <$> get
 
 getVersionManifest :: Monad m => AppStateT m VersionManifestV2
 getVersionManifest = versionManifest_ <$> get
+
+getJavaRuntimeManifestAll :: Monad m => AppStateT m JavaRuntimeManifestAll
+getJavaRuntimeManifestAll = javaRuntimeManifestAll_ <$> get
 
 getAppState :: Monad m => AppStateT m AppState
 getAppState = get

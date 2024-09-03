@@ -1,8 +1,9 @@
 module Data.JavaRuntime.JavaRuntimeManifest
-    ( JavaRuntimeVersion (..)
+    ( JavaRuntimeVariant (..)
     , JavaRuntimeManifest
     , JavaRuntimeManifestAll
     , getJavaRuntimeManifestAllUrl
+    , getLocalJavaRuntimeManifestAllPath
     , parseJavaRuntimeManifestAll
     , getJavaRuntimeManifest
     , getJavaRuntimeManifestSha1
@@ -12,11 +13,13 @@ module Data.JavaRuntime.JavaRuntimeManifest
 import           Data.Aeson
 import           Data.ByteString (ByteString)
 import           Data.Maybe      (listToMaybe)
+import           Data.Minecraft  (MinecraftDir)
+import           System.FilePath ((</>))
 import           System.OS       (OSType (..), currentOSType)
 import           System.OS.Arch  (OSArch (..), currentOSArch)
 import           Text.Printf     (printf)
 
-data JavaRuntimeVersion = JavaRuntimeAlpha
+data JavaRuntimeVariant = JavaRuntimeAlpha
                         | JavaRuntimeBeta
                         | JavaRuntimeDelta
                         | JavaRuntimeGamma
@@ -24,6 +27,16 @@ data JavaRuntimeVersion = JavaRuntimeAlpha
                         | JreLegacy
                         | MinecraftJavaExe
                         deriving (Show, Eq)
+
+instance FromJSON JavaRuntimeVariant where
+    parseJSON (String "java-runtime-alpha")          = pure JavaRuntimeAlpha
+    parseJSON (String "java-runtime-beta")           = pure JavaRuntimeBeta
+    parseJSON (String "java-runtime-delta")          = pure JavaRuntimeDelta
+    parseJSON (String "java-runtime-gamma")          = pure JavaRuntimeGamma
+    parseJSON (String "java-runtime-gamma-snapshot") = pure JavaRuntimeGammaSnapshot
+    parseJSON (String "jre-legacy")                  = pure JreLegacy
+    parseJSON (String "minecraft-java-exe")          = pure MinecraftJavaExe
+    parseJSON x = fail (printf "Invalid JavaRuntimeVariant structure: %s" (show x))
 
 data JavaRuntimeManifestManifest = JavaRuntimeManifestManifest
     { javaRuntimeManifestSha1_ :: String
@@ -99,6 +112,10 @@ getJavaRuntimeManifestAllUrl :: String
 getJavaRuntimeManifestAllUrl =
     "https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"
 
+getLocalJavaRuntimeManifestAllPath :: MinecraftDir -> FilePath
+getLocalJavaRuntimeManifestAllPath mcDir =
+    mcDir </> "runtime" </> "all.json"
+
 parseJavaRuntimeManifestAll :: ByteString -> Either String JavaRuntimeManifestAll
 parseJavaRuntimeManifestAll =
     either (Left . printf "Failed to parse ClientJson: %s") Right .
@@ -121,10 +138,10 @@ getJavaRuntimeManifests manifestAll =
                 X86 -> linuxI386Manifests_ manifestAll
                 _   -> linuxManifests_ manifestAll
 
-getJavaRuntimeManifest :: JavaRuntimeManifestAll -> JavaRuntimeVersion -> Maybe JavaRuntimeManifest
-getJavaRuntimeManifest manifestAll runtimeVersion =
+getJavaRuntimeManifest :: JavaRuntimeManifestAll -> JavaRuntimeVariant -> Maybe JavaRuntimeManifest
+getJavaRuntimeManifest manifestAll variant =
     let manifests = getJavaRuntimeManifests manifestAll in
-        listToMaybe $ case runtimeVersion of
+        listToMaybe $ case variant of
             JavaRuntimeAlpha         -> javaRuntimeAlphaManifests_ manifests
             JavaRuntimeBeta          -> javaRuntimeBetaManifests_ manifests
             JavaRuntimeDelta         -> javaRuntimeDeltaManifests_ manifests
