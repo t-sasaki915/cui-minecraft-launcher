@@ -21,6 +21,7 @@ source-repository head
 library
   exposed-modules:
       Crypto.Hash.Sha1.Extra
+      Data.JavaRuntime.JavaRuntimeManifest
       Data.Minecraft.AssetIndex
       Data.Minecraft.ClientJson
       Data.Minecraft.VersionManifestV2
