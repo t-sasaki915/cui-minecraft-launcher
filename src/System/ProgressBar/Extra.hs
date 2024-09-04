@@ -9,11 +9,13 @@ simpleProgressBarStyle :: Label s -> Style s
 simpleProgressBarStyle title =
     Style
         { styleWidth         = TerminalWidth 100
-        , styleTodo          = '.'
         , stylePrefix        = title
-        , stylePostfix       = percentage
         , styleOpen          = "["
-        , styleOnComplete    = WriteNewline
+        , styleDone          = '='
+        , styleCurrent       = '>'
+        , styleTodo          = '.'
+        , styleClose         = "]"
+        , stylePostfix       = percentage
         , styleEscapeTodo    = const ""
         , styleEscapePrefix  = const ""
         , styleEscapePostfix = const ""
@@ -21,9 +23,7 @@ simpleProgressBarStyle title =
         , styleEscapeDone    = const ""
         , styleEscapeCurrent = const ""
         , styleEscapeClose   = const ""
-        , styleDone          = '='
-        , styleCurrent       = '>'
-        , styleClose         = "]"
+        , styleOnComplete    = WriteNewline
         }
 
 newSimpleProgressBar :: Label () -> Int -> IO (ProgressBar ())
