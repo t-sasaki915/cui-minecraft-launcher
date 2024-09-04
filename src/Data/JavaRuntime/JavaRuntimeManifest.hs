@@ -124,7 +124,7 @@ getJavaRuntimeManifestAllUrl =
 
 getLocalJavaRuntimeManifestAllPath :: MinecraftDir -> FilePath
 getLocalJavaRuntimeManifestAllPath mcDir =
-    mcDir </> "runtime" </> "all.json"
+    mcDir </> "versions" </> "jre_manifest.json"
 
 getLocalJavaRuntimeManifestPath :: MinecraftDir -> JavaRuntimeVariant -> FilePath
 getLocalJavaRuntimeManifestPath mcDir variant =
