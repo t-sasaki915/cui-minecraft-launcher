@@ -15,8 +15,11 @@ module Data.Minecraft.ClientJson
     , getClientJarSha1
     , getLocalClientJarPath
     , getJavaRuntimeVariant
+    , getClientGameArguments
+    , getClientJvmArguments
     , RuleContext (..)
     , filterLibraries
+    , filterArguments
     ) where
 
 import           Control.Monad                        (forM)
@@ -25,7 +28,9 @@ import           Data.Aeson
 import           Data.ByteString                      (ByteString)
 import           Data.Functor                         ((<&>))
 import           Data.JavaRuntime.JavaRuntimeManifest (JavaRuntimeVariant (JreLegacy))
-import           Data.Maybe                           (fromMaybe, maybeToList)
+import           Data.List.Extra                      (splitOn)
+import           Data.Maybe                           (fromJust, fromMaybe,
+                                                       maybeToList)
 import           Data.Minecraft                       (MinecraftDir)
 import           Data.Minecraft.VersionManifestV2     (MCVersion, MCVersionID,
                                                        getMCVersionID)
@@ -34,7 +39,8 @@ import           Data.Text                            (unpack)
 import           System.FilePath                      ((</>))
 import           System.OS                            (OSType (..),
                                                        currentOSType)
-import           System.OS.Arch                       (OSArch, currentOSArch)
+import           System.OS.Arch                       (OSArch (X86),
+                                                       currentOSArch)
 import           System.OS.Version                    (OSVersion)
 import           Text.Printf                          (printf)
 import           Text.Regex.Posix                     ((=~))
@@ -322,6 +328,80 @@ getLocalClientJarPath mcDir clientJson =
 getJavaRuntimeVariant :: ClientJson -> JavaRuntimeVariant
 getJavaRuntimeVariant = maybe JreLegacy javaVersionComponent_ . clientJavaVersion_
 
+getClientGameArguments :: ClientJson -> [ClientArgument]
+getClientGameArguments clientJson = case clientArguments_ clientJson of
+    Just clientArguments ->
+        clientGameArguments_ clientArguments
+
+    Nothing ->
+        map CommonClientArgument (splitOn " " (fromJust (clientArgumentsLegacy_ clientJson)))
+
+getClientJvmArguments :: ClientJson -> [ClientArgument]
+getClientJvmArguments clientJson = maybe
+    [ ClientArgumentsWithRules
+        [ Rule
+            { ruleAction_ = Allow
+            , featureRule_ = Nothing
+            , osRule_ = Just
+                ( OSRule
+                    { osNameRule_ = Just OSX
+                    , osArchNameRule_ = Nothing
+                    , osVersionPattern_ = Nothing
+                    }
+                )
+            }
+        ]
+        (SingleValue "-XstartOnFirstThread")
+    , ClientArgumentsWithRules
+        [ Rule
+            { ruleAction_ = Allow
+            , featureRule_ = Nothing
+            , osRule_ = Just
+                ( OSRule
+                    { osNameRule_ = Just Windows
+                    , osArchNameRule_ = Nothing
+                    , osVersionPattern_ = Nothing
+                    }
+                )
+            }
+        ]
+        (SingleValue "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump")
+    , ClientArgumentsWithRules
+        [ Rule
+            { ruleAction_ = Allow
+            , featureRule_ = Nothing
+            , osRule_ = Just
+                ( OSRule
+                    { osNameRule_ = Just Windows
+                    , osArchNameRule_ = Nothing
+                    , osVersionPattern_ = Just "^10\\."
+                    }
+                )
+            }
+        ]
+        (MultipleValue ["-Dos.name=Windows 10", "-Dos.version=10.0"])
+    , ClientArgumentsWithRules
+        [ Rule
+            { ruleAction_ = Allow
+            , featureRule_ = Nothing
+            , osRule_ = Just
+                ( OSRule
+                    { osNameRule_ = Nothing
+                    , osArchNameRule_ = Just X86
+                    , osVersionPattern_ = Nothing
+                    }
+                )
+            }
+        ]
+        (SingleValue "-Xss1M")
+    , CommonClientArgument "-Djava.library.path=${natives_directory}"
+    , CommonClientArgument "-Dminecraft.launcher.brand=${launcher_name}"
+    , CommonClientArgument "-Dminecraft.launcher.version=${launcher_version}"
+    , CommonClientArgument "-cp"
+    , CommonClientArgument "${classpath}"
+    ]
+    clientJvmArguments_ (clientArguments_ clientJson)
+
 data RuleContext = RuleContext
     { osVersion               :: OSVersion
     , isDemoUser              :: Bool
@@ -375,3 +455,12 @@ filterLibraries ctx = concatMap $ \library ->
                                 OSX     -> libraryNativesOSX_ classifiers
                         Nothing -> Nothing in
                 (maybeToList mArtifact ++ maybeToList mClassifier)
+
+filterArguments :: RuleContext -> [ClientArgument] -> [String]
+filterArguments ctx = concatMap $ \case
+    CommonClientArgument arg -> [arg]
+    ClientArgumentsWithRules rules arg ->
+        mwhen (judgeRules ctx rules) $
+            case arg of
+                SingleValue argument    -> [argument]
+                MultipleValue arguments -> arguments

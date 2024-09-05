@@ -2,17 +2,17 @@
 
 module Procedure.CommandPrompt.Command.QuickLaunchCommand (QuickLaunchCommand (QuickLaunchCommand)) where
 
-import           Interface.CommandPrompt.Command           (Command (..))
-import           Internal.AppState                         (AppStateT,
-                                                            getVersionManifest)
-import           Procedure.MinecraftLauncher.LaunchPrepare (prepareMinecraftLaunch)
+import           Interface.CommandPrompt.Command  (Command (..))
+import           Internal.AppState                (AppStateT,
+                                                   getVersionManifest)
+import           Procedure.MinecraftLauncher      (launchMinecraft)
 
-import           Control.Monad.Trans.Class                 (lift)
-import           Data.List                                 (find)
+import           Control.Monad.Trans.Class        (lift)
+import           Data.List                        (find)
 import           Data.Minecraft.VersionManifestV2
-import           GHC.Stack                                 (HasCallStack)
+import           GHC.Stack                        (HasCallStack)
 import           Options.Applicative
-import           Text.Printf                               (printf)
+import           Text.Printf                      (printf)
 
 data QuickLaunchCommand = QuickLaunchCommand
                         | QuickLaunchCommandOptions
@@ -51,7 +51,7 @@ quickLaunchCommandProcedure opts = do
         Just mcVersion -> do
             lift (putStrLn (printf "Launching Minecraft %s ..." launchVersion))
 
-            prepareMinecraftLaunch mcVersion
+            launchMinecraft mcVersion
 
         Nothing ->
             error (printf "Version '%s' is unavailable." launchVersion)
