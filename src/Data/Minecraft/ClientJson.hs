@@ -397,6 +397,7 @@ getClientJvmArguments clientJson = maybe
     , CommonClientArgument "-Djava.library.path=${natives_directory}"
     , CommonClientArgument "-Dminecraft.launcher.brand=${launcher_name}"
     , CommonClientArgument "-Dminecraft.launcher.version=${launcher_version}"
+    , CommonClientArgument "-Dminecraft.client.jar=${client_jar_path}"
     , CommonClientArgument "-cp"
     , CommonClientArgument "${classpath}"
     ]
