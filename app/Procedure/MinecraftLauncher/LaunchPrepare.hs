@@ -210,11 +210,10 @@ prepareMinecraftLaunch mcVersion = do
     downloadClientJson mcVersion
     clientJson <- readClientJson mcVersion
     downloadClientJar clientJson
+    downloadLibraries clientJson
 
     downloadAssetIndex clientJson
     assetIndex <- readAssetIndex clientJson
     downloadAssets clientJson assetIndex
-
-    downloadLibraries clientJson
 
     prepareJavaRuntime (getJavaRuntimeVariant clientJson)
