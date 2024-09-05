@@ -415,7 +415,7 @@ data RuleContext = RuleContext
 judgeOSRule :: RuleContext -> OSRule -> Bool
 judgeOSRule ctx (OSRule mOSName mOSVersion mOSArch) =
     maybe True (== currentOSType) mOSName &&
-    maybe True (=~ osVersion ctx) mOSVersion &&
+    maybe True (osVersion ctx =~) mOSVersion &&
     maybe True (== currentOSArch) mOSArch
 
 judgeFeatureRule :: RuleContext -> FeatureRule -> Bool

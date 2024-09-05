@@ -12,14 +12,9 @@ type OSVersion = String
 fetchOSVersion :: HasCallStack => IO OSVersion
 fetchOSVersion = case currentOSType of
     Windows ->
-        readProcessEither "systeminfo.exe" [] >>= \case
-            Right output ->
-                let osNameLine = output =~ ("^OS Name: +Microsoft Windows .+ .+$" :: String)
-                    elements = words osNameLine in -- ["OS", "Name:", "Microsoft", "Windows", "<Version>", "<Edition>"]
-                        return (elements !! 4)
-
-            Left errMsg ->
-                error (printf "Failed to fetch the version of Windows: %s" errMsg)
+        readProcessEither "wmic.exe" ["os", "get", "version"] <&>
+            either (error . printf "Failed to fetch the version of Windows: %s")
+                (=~ ("^[0-9]+\\.[0-9]+\\..+$" :: String))
 
     OSX ->
         readProcessEither "sw_vers" ["-productVersion"] <&>
