@@ -3,7 +3,7 @@
 module Procedure.CommandPrompt.Command.QuickLaunchCommand (QuickLaunchCommand (QuickLaunchCommand)) where
 
 import           Interface.CommandPrompt.Command  (Command (..))
-import           Internal.AppState                (AppStateT,
+import           Internal.AppState                (AppStateT, getMinecraftDir,
                                                    getVersionManifest)
 import           Procedure.MinecraftLauncher      (LaunchContext (..),
                                                    launchMinecraft)
@@ -22,6 +22,7 @@ data QuickLaunchCommand = QuickLaunchCommand
                             { launchVersion_ :: String
                             , width_         :: Maybe Int
                             , height_        :: Maybe Int
+                            , gameDir_       :: FilePath
                             }
 
 instance Command QuickLaunchCommand where
@@ -34,6 +35,7 @@ instance Command QuickLaunchCommand where
 quickLaunchCommandArgParser :: AppStateT IO (Parser QuickLaunchCommand)
 quickLaunchCommandArgParser = do
     versionManifest <- getVersionManifest
+    minecraftDir    <- getMinecraftDir
 
     return $
         QuickLaunchCommandOptions
@@ -61,12 +63,21 @@ quickLaunchCommandArgParser = do
                    <> short 'h'
                     )
                 )
+            <*> strOption
+                ( help "Use a custom game directory."
+               <> value minecraftDir
+               <> showDefault
+               <> metavar "FilePath"
+               <> long "gamedir"
+               <> short 'g'
+                )
 
 quickLaunchCommandProcedure :: HasCallStack => QuickLaunchCommand -> AppStateT IO ()
 quickLaunchCommandProcedure opts = do
     let launchVersion = launchVersion_ opts
         width = width_ opts
         height = height_ opts
+        gameDir = gameDir_ opts
 
     unless ((isJust width && isJust height) || (isNothing width && isNothing height)) $
         error "Please specify both '--width' and '--height' simultaneously."
@@ -85,6 +96,7 @@ quickLaunchCommandProcedure opts = do
                         , quickPlaySinglePlayer = Nothing
                         , quickPlayMultiPlayer = Nothing
                         , quickPlayRealms = Nothing
+                        , gameDirectory = gameDir
                         }
 
             launchMinecraft mcVersion launchCtx

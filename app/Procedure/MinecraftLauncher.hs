@@ -26,6 +26,7 @@ data LaunchContext = LaunchContext
     , quickPlaySinglePlayer :: Maybe String
     , quickPlayMultiPlayer  :: Maybe String
     , quickPlayRealms       :: Maybe String
+    , gameDirectory         :: FilePath
     }
 
 getRuleContext :: LaunchContext -> AppStateT IO RuleContext
@@ -66,7 +67,7 @@ constructGameArguments launchCtx mcVersion clientJson = do
     return $ constructArguments (filterArguments ruleContext gameArguments)
         [ ("auth_player_name"     , "TODO")
         , ("version_name"         , getClientVersionID clientJson)
-        , ("game_directory"       , "TODO")
+        , ("game_directory"       , gameDirectory launchCtx)
         , ("assets_root"          , minecraftDir </> "assets")
         , ("assets_index_name"    , getAssetVersion clientJson)
         , ("auth_uuid"            , "TODO")
@@ -79,9 +80,9 @@ constructGameArguments launchCtx mcVersion clientJson = do
         , ("resolution_width"     , show (fromMaybe 0 (windowWidth launchCtx)))
         , ("resolution_height"    , show (fromMaybe 0 (windowHeight launchCtx)))
         , ("quickPlayPath"        , "quickPlay" </> "log.json")
-        , ("quickPlaySingleplayer", "TODO")
-        , ("quickPlayMultiplayer" , "TODO")
-        , ("quickPlayRealms"      , "TODO")
+        , ("quickPlaySingleplayer", fromMaybe "" (quickPlaySinglePlayer launchCtx))
+        , ("quickPlayMultiplayer" , fromMaybe "" (quickPlayMultiPlayer launchCtx))
+        , ("quickPlayRealms"      , fromMaybe "" (quickPlayRealms launchCtx))
         ]
 
 constructClasspath :: RuleContext -> ClientJson -> AppStateT IO String
