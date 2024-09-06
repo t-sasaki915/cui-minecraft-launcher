@@ -39,7 +39,13 @@ instance FromJSON LatestVersions where
             <*> (m .: "snapshot")
     parseJSON x = fail (printf "Invalid LatestVersions structure: %s" (show x))
 
-data MCVersionType = Release | Snapshot | OldBeta | OldAlpha deriving (Show, Eq)
+data MCVersionType = Release | Snapshot | OldBeta | OldAlpha deriving Eq
+
+instance Show MCVersionType where
+    show Release  = "release"
+    show Snapshot = "snapshot"
+    show OldBeta  = "old_beta"
+    show OldAlpha = "old_alpha"
 
 instance FromJSON MCVersionType where
     parseJSON (String "release")   = pure Release

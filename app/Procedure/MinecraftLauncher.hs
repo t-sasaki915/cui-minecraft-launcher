@@ -8,7 +8,7 @@ import qualified Data.ByteString                           as BS
 import           Data.List                                 (intercalate)
 import           Data.List.Extra                           (replace)
 import           Data.Minecraft.ClientJson
-import           Data.Minecraft.VersionManifestV2          (MCVersion)
+import           Data.Minecraft.VersionManifestV2
 import           Data.Version                              (showVersion)
 import           GHC.Stack                                 (HasCallStack)
 import           System.OS                                 (OSType (..),
@@ -17,6 +17,7 @@ import           Text.Printf                               (printf)
 
 import           Data.Maybe                                (isJust)
 import           Paths_cui_minecraft_launcher              (version)
+import           System.FilePath                           ((</>))
 
 data LaunchContext = LaunchContext
     { windowWidth           :: Maybe Int
@@ -55,10 +56,32 @@ constructArguments :: [String] -> [(String, String)] -> [String]
 constructArguments  = foldl $ \args (bindKey, bindValue) ->
     flip map args $ replace (printf "${%s}" bindKey) bindValue
 
-constructGameArguments :: RuleContext -> ClientJson -> AppStateT IO [String]
-constructGameArguments ruleContext clientJson =
-    let gameArguments = getClientGameArguments clientJson in
-        return (filterArguments ruleContext gameArguments)
+constructGameArguments :: RuleContext -> MCVersion -> ClientJson -> AppStateT IO [String]
+constructGameArguments ruleContext mcVersion clientJson = do
+    minecraftDir <- getMinecraftDir
+
+    let gameArguments = getClientGameArguments clientJson
+
+    return $ constructArguments (filterArguments ruleContext gameArguments)
+        [ ("auth_player_name"     , "TODO")
+        , ("version_name"         , getClientVersionID clientJson)
+        , ("game_directory"       , "TODO")
+        , ("assets_root"          , minecraftDir </> "assets")
+        , ("assets_index_name"    , getAssetVersion clientJson)
+        , ("auth_uuid"            , "TODO")
+        , ("auth_access_token"    , "TODO")
+        , ("auth_session"         , "TODO")
+        , ("clientid"             , "TODO")
+        , ("auth_xuid"            , "TODO")
+        , ("user_type"            , "TODO")
+        , ("version_type"         , show (getMCVersionType mcVersion))
+        , ("resolution_width"     , "TODO")
+        , ("resolution_height"    , "TODO")
+        , ("quickPlayPath"        , "quickPlay" </> "log.json")
+        , ("quickPlaySingleplayer", "TODO")
+        , ("quickPlayMultiplayer" , "TODO")
+        , ("quickPlayRealms"      , "TODO")
+        ]
 
 constructClasspath :: RuleContext -> ClientJson -> AppStateT IO String
 constructClasspath ruleContext clientJson = do
@@ -102,7 +125,7 @@ launchMinecraft mcVersion launchCtx = do
 
     clientJson <- readClientJson mcVersion
 
-    gameArguments <- constructGameArguments ruleContext clientJson
+    gameArguments <- constructGameArguments ruleContext mcVersion clientJson
     jvmArguments  <- constructJvmArguments ruleContext clientJson
 
     lift (print jvmArguments)
