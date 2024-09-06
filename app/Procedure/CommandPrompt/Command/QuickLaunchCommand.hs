@@ -8,8 +8,10 @@ import           Internal.AppState                (AppStateT,
 import           Procedure.MinecraftLauncher      (LaunchContext (..),
                                                    launchMinecraft)
 
+import           Control.Monad                    (unless)
 import           Control.Monad.Trans.Class        (lift)
 import           Data.List                        (find)
+import           Data.Maybe                       (isJust, isNothing)
 import           Data.Minecraft.VersionManifestV2
 import           GHC.Stack                        (HasCallStack)
 import           Options.Applicative
@@ -18,6 +20,8 @@ import           Text.Printf                      (printf)
 data QuickLaunchCommand = QuickLaunchCommand
                         | QuickLaunchCommandOptions
                             { launchVersion_ :: String
+                            , width_         :: Maybe Int
+                            , height_        :: Maybe Int
                             }
 
 instance Command QuickLaunchCommand where
@@ -41,10 +45,31 @@ quickLaunchCommandArgParser = do
                <> long "version"
                <> short 'v'
                 )
+            <*> optional
+                ( option auto
+                    ( help "Use a custom resolution."
+                   <> metavar "Int"
+                   <> long "width"
+                   <> short 'w'
+                    )
+                )
+            <*> optional
+                ( option auto
+                    ( help "Use a custom resolution."
+                   <> metavar "Int"
+                   <> long "height"
+                   <> short 'h'
+                    )
+                )
 
 quickLaunchCommandProcedure :: HasCallStack => QuickLaunchCommand -> AppStateT IO ()
 quickLaunchCommandProcedure opts = do
     let launchVersion = launchVersion_ opts
+        width = width_ opts
+        height = height_ opts
+
+    unless ((isJust width && isJust height) || (isNothing width && isNothing height)) $
+        error "Please specify both '--width' and '--height' simultaneously."
 
     versionManifest <- getVersionManifest
 
@@ -54,8 +79,8 @@ quickLaunchCommandProcedure opts = do
 
             let launchCtx =
                     LaunchContext
-                        { windowWidth = Nothing
-                        , windowHeight = Nothing
+                        { windowWidth = width
+                        , windowHeight = height
                         , shouldUseDemoMode = False
                         , quickPlaySinglePlayer = Nothing
                         , quickPlayMultiPlayer = Nothing

@@ -15,7 +15,7 @@ import           System.OS                                 (OSType (..),
                                                             currentOSType)
 import           Text.Printf                               (printf)
 
-import           Data.Maybe                                (isJust)
+import           Data.Maybe                                (fromMaybe, isJust)
 import           Paths_cui_minecraft_launcher              (version)
 import           System.FilePath                           ((</>))
 
@@ -56,9 +56,10 @@ constructArguments :: [String] -> [(String, String)] -> [String]
 constructArguments  = foldl $ \args (bindKey, bindValue) ->
     flip map args $ replace (printf "${%s}" bindKey) bindValue
 
-constructGameArguments :: RuleContext -> MCVersion -> ClientJson -> AppStateT IO [String]
-constructGameArguments ruleContext mcVersion clientJson = do
+constructGameArguments :: LaunchContext -> MCVersion -> ClientJson -> AppStateT IO [String]
+constructGameArguments launchCtx mcVersion clientJson = do
     minecraftDir <- getMinecraftDir
+    ruleContext  <- getRuleContext launchCtx
 
     let gameArguments = getClientGameArguments clientJson
 
@@ -75,8 +76,8 @@ constructGameArguments ruleContext mcVersion clientJson = do
         , ("auth_xuid"            , "TODO")
         , ("user_type"            , "TODO")
         , ("version_type"         , show (getMCVersionType mcVersion))
-        , ("resolution_width"     , "TODO")
-        , ("resolution_height"    , "TODO")
+        , ("resolution_width"     , show (fromMaybe 0 (windowWidth launchCtx)))
+        , ("resolution_height"    , show (fromMaybe 0 (windowHeight launchCtx)))
         , ("quickPlayPath"        , "quickPlay" </> "log.json")
         , ("quickPlaySingleplayer", "TODO")
         , ("quickPlayMultiplayer" , "TODO")
@@ -125,7 +126,7 @@ launchMinecraft mcVersion launchCtx = do
 
     clientJson <- readClientJson mcVersion
 
-    gameArguments <- constructGameArguments ruleContext mcVersion clientJson
+    gameArguments <- constructGameArguments launchCtx mcVersion clientJson
     jvmArguments  <- constructJvmArguments ruleContext clientJson
 
     lift (print jvmArguments)
