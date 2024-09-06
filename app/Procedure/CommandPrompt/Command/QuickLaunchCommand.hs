@@ -5,7 +5,8 @@ module Procedure.CommandPrompt.Command.QuickLaunchCommand (QuickLaunchCommand (Q
 import           Interface.CommandPrompt.Command  (Command (..))
 import           Internal.AppState                (AppStateT,
                                                    getVersionManifest)
-import           Procedure.MinecraftLauncher      (launchMinecraft)
+import           Procedure.MinecraftLauncher      (LaunchContext (..),
+                                                   launchMinecraft)
 
 import           Control.Monad.Trans.Class        (lift)
 import           Data.List                        (find)
@@ -51,7 +52,17 @@ quickLaunchCommandProcedure opts = do
         Just mcVersion -> do
             lift (putStrLn (printf "Launching Minecraft %s ..." launchVersion))
 
-            launchMinecraft mcVersion
+            let launchCtx =
+                    LaunchContext
+                        { windowWidth = Nothing
+                        , windowHeight = Nothing
+                        , shouldUseDemoMode = False
+                        , quickPlaySinglePlayer = Nothing
+                        , quickPlayMultiPlayer = Nothing
+                        , quickPlayRealms = Nothing
+                        }
+
+            launchMinecraft mcVersion launchCtx
 
         Nothing ->
             error (printf "Version '%s' is unavailable." launchVersion)

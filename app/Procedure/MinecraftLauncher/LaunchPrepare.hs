@@ -1,8 +1,8 @@
 module Procedure.MinecraftLauncher.LaunchPrepare (prepareMinecraftLaunch) where
 
 import           Internal.AppState                              (AppStateT,
-                                                                 getMinecraftDir,
-                                                                 getOSVersion)
+                                                                 getMinecraftDir)
+import           Procedure.MinecraftLauncher.JavaRuntimePrepare (prepareJavaRuntime)
 
 import           Control.Concurrent.Async                       (forConcurrently_)
 import           Control.Monad.Extra                            (forM_, unless,
@@ -17,7 +17,6 @@ import           Data.Minecraft.ClientJson
 import           Data.Minecraft.VersionManifestV2
 import           GHC.Stack                                      (HasCallStack)
 import           Network.Curl                                   (downloadFile)
-import           Procedure.MinecraftLauncher.JavaRuntimePrepare (prepareJavaRuntime)
 import           System.Directory                               (createDirectoryIfMissing,
                                                                  doesFileExist)
 import           System.FilePath                                (takeDirectory)
@@ -162,22 +161,11 @@ downloadAssets clientJson assetIndex = do
                     Left errMsg ->
                         error (printf "Failed to download an asset object '%s': %s" assetObjSha1 errMsg)
 
-downloadLibraries :: HasCallStack => ClientJson -> AppStateT IO ()
-downloadLibraries clientJson = do
+downloadLibraries :: HasCallStack => ClientJson -> RuleContext ->  AppStateT IO ()
+downloadLibraries clientJson ruleContext = do
     minecraftDir <- getMinecraftDir
-    osVer <- getOSVersion
 
-    let ruleContext =
-            RuleContext
-                { osVersion = osVer
-                , isDemoUser = False
-                , hasCustomResolution = False
-                , hasQuickPlaysSupport = False
-                , isQuickPlaySinglePlayer = False
-                , isQuickPlayMultiplayer = False
-                , isQuickPlayRealms = False
-                }
-        clientLibraries = getClientLibraries clientJson
+    let clientLibraries = getClientLibraries clientJson
         adoptedLibraries = filterLibraries ruleContext clientLibraries
 
     progressBar <- lift (newSimpleProgressBar "Downloading Libraries" (length adoptedLibraries))
@@ -205,12 +193,12 @@ downloadLibraries clientJson = do
                 Left errMsg ->
                     error (printf "Failed to download a library '%s': %s" localLibraryPath errMsg)
 
-prepareMinecraftLaunch :: HasCallStack => MCVersion -> AppStateT IO ()
-prepareMinecraftLaunch mcVersion = do
+prepareMinecraftLaunch :: HasCallStack => MCVersion -> RuleContext -> AppStateT IO ()
+prepareMinecraftLaunch mcVersion ruleContext = do
     downloadClientJson mcVersion
     clientJson <- readClientJson mcVersion
     downloadClientJar clientJson
-    downloadLibraries clientJson
+    downloadLibraries clientJson ruleContext
 
     downloadAssetIndex clientJson
     assetIndex <- readAssetIndex clientJson

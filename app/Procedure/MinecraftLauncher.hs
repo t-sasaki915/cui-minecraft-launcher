@@ -1,4 +1,4 @@
-module Procedure.MinecraftLauncher (launchMinecraft) where
+module Procedure.MinecraftLauncher (LaunchContext (..), launchMinecraft) where
 
 import           Internal.AppState
 import           Procedure.MinecraftLauncher.LaunchPrepare (prepareMinecraftLaunch)
@@ -15,7 +15,31 @@ import           System.OS                                 (OSType (..),
                                                             currentOSType)
 import           Text.Printf                               (printf)
 
+import           Data.Maybe                                (isJust)
 import           Paths_cui_minecraft_launcher              (version)
+
+data LaunchContext = LaunchContext
+    { windowWidth           :: Maybe Int
+    , windowHeight          :: Maybe Int
+    , shouldUseDemoMode     :: Bool
+    , quickPlaySinglePlayer :: Maybe String
+    , quickPlayMultiPlayer  :: Maybe String
+    , quickPlayRealms       :: Maybe String
+    }
+
+getRuleContext :: LaunchContext -> AppStateT IO RuleContext
+getRuleContext ctx = do
+    osVer <- getOSVersion
+    return $
+        RuleContext
+            { osVersion = osVer
+            , isDemoUser = shouldUseDemoMode ctx
+            , hasCustomResolution = isJust (windowWidth ctx)
+            , hasQuickPlaysSupport = isJust (quickPlaySinglePlayer ctx) || isJust (quickPlayMultiPlayer ctx) || isJust (quickPlayRealms ctx)
+            , isQuickPlaySinglePlayer = isJust (quickPlaySinglePlayer ctx)
+            , isQuickPlayMultiplayer = isJust (quickPlayMultiPlayer ctx)
+            , isQuickPlayRealms = isJust (quickPlayRealms ctx)
+            }
 
 readClientJson :: HasCallStack => MCVersion -> AppStateT IO ClientJson
 readClientJson mcVersion = do
@@ -70,23 +94,13 @@ constructJvmArguments ruleContext clientJson = do
         , ("classpath"        , classpath)
         ]
 
-launchMinecraft :: HasCallStack => MCVersion -> AppStateT IO ()
-launchMinecraft mcVersion = do
-    prepareMinecraftLaunch mcVersion
+launchMinecraft :: HasCallStack => MCVersion -> LaunchContext -> AppStateT IO ()
+launchMinecraft mcVersion launchCtx = do
+    ruleContext <- getRuleContext launchCtx
+
+    prepareMinecraftLaunch mcVersion ruleContext
 
     clientJson <- readClientJson mcVersion
-
-    osVer <- getOSVersion
-    let ruleContext =
-            RuleContext
-                { osVersion = osVer
-                , isDemoUser = False
-                , hasCustomResolution = False
-                , hasQuickPlaysSupport = False
-                , isQuickPlaySinglePlayer = False
-                , isQuickPlayMultiplayer = False
-                , isQuickPlayRealms = False
-                }
 
     gameArguments <- constructGameArguments ruleContext clientJson
     jvmArguments  <- constructJvmArguments ruleContext clientJson
