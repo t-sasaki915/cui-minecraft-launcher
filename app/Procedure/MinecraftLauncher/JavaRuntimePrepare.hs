@@ -109,7 +109,7 @@ downloadJavaRuntime variant runtime = do
                         when (not fileExists || not sha1Verification) $ do
                             downloadFile localRuntimeFilePath runtimeFileUrl >>= \case
                                 Right () ->
-                                    incProgress progressBar 1
+                                    return ()
 
                                 Left errMsg ->
                                     error (printf "Failed to download a runtime file '%s': %s" runtimeFileName errMsg)
@@ -121,6 +121,8 @@ downloadJavaRuntime variant runtime = do
 
                                     Left errMsg ->
                                         error (printf "Failed to make a file executable: %s" errMsg)
+
+                            incProgress progressBar 1
 
     let runtimeFileLinks = filter ((== Link) . getJavaRuntimeFileType) (getJavaRuntimeFiles runtime)
 
