@@ -30,7 +30,7 @@ library
       Network.Curl
       System.OS.Arch
       System.OS.Version
-      System.Process.Extra
+      System.Process.Extra2
       System.ProgressBar.Extra
       System.OS
   other-modules:

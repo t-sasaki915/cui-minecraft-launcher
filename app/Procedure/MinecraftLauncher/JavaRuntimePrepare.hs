@@ -4,6 +4,7 @@ import           Internal.AppState
 
 import           Control.Concurrent.Async             (forConcurrently_)
 import           Control.Monad                        (forM_, unless, when)
+import           Control.Monad.Extra                  (unlessM)
 import           Control.Monad.Trans.Class            (lift)
 import           Crypto.Hash.Sha1.Extra               (stringHash)
 import qualified Data.ByteString                      as BS
@@ -14,9 +15,13 @@ import           Data.List.Extra                      (chunksOf)
 import           GHC.Stack                            (HasCallStack)
 import           Network.Curl                         (downloadFile)
 import           System.Directory                     (createDirectoryIfMissing,
+                                                       createFileLink,
                                                        doesFileExist)
-import           System.FilePath                      (takeDirectory)
+import           System.FilePath                      (takeDirectory, (</>))
 import           System.IO                            (hFlush, stdout)
+import           System.OS                            (OSType (Windows),
+                                                       currentOSType)
+import           System.Process.Extra2                (execProcessEither)
 import           System.ProgressBar                   (incProgress)
 import           System.ProgressBar.Extra             (newSimpleProgressBar)
 import           Text.Printf                          (printf)
@@ -69,36 +74,65 @@ downloadJavaRuntime :: HasCallStack => JavaRuntimeVariant -> JavaRuntime -> AppS
 downloadJavaRuntime variant runtime = do
     minecraftDir <- getMinecraftDir
 
-    let runtimeFiles = filter (not . isJavaRuntimeFileDirectory) (getJavaRuntimeFiles runtime)
-        runtimeFileChunks = chunksOf 50 runtimeFiles
+    let runtimeFiles = getJavaRuntimeFiles runtime
+        runtimeFileChunks = chunksOf 50 (filter ((/= Link) . getJavaRuntimeFileType) runtimeFiles)
         getLocalJavaRuntimeFilePath' = getLocalJavaRuntimeFilePath minecraftDir variant
 
     progressBar <- lift (newSimpleProgressBar "Downloading JavaRuntime" (length runtimeFiles))
 
     lift $ forM_ runtimeFileChunks $ \runtimeFileChunk ->
-        forConcurrently_ runtimeFileChunk $ \runtimeFile -> do
-            let runtimeFileUrl = getJavaRuntimeRawFileUrl runtimeFile
-                runtimeFileSha1 = getJavaRuntimeRawFileSha1 runtimeFile
-                runtimeFileName = getJavaRuntimeFileName runtimeFile
-                localRuntimeFilePath = getLocalJavaRuntimeFilePath' runtimeFile
+        forConcurrently_ runtimeFileChunk $ \runtimeFile ->
+            let localRuntimeFilePath = getLocalJavaRuntimeFilePath' runtimeFile in
+                case getJavaRuntimeFileType runtimeFile of
+                    Directory -> do
+                        createDirectoryIfMissing True localRuntimeFilePath
 
-            fileExists <- doesFileExist localRuntimeFilePath
-            sha1Verification <- if fileExists
-                then BS.readFile localRuntimeFilePath <&> ((== runtimeFileSha1) . stringHash)
-                else return False
-
-            unless (not fileExists || not sha1Verification) $
-                incProgress progressBar 1
-
-            when (not fileExists || not sha1Verification) $ do
-                createDirectoryIfMissing True (takeDirectory localRuntimeFilePath)
-
-                downloadFile localRuntimeFilePath runtimeFileUrl >>= \case
-                    Right () ->
                         incProgress progressBar 1
 
-                    Left errMsg ->
-                        error (printf "Failed to download a runtime file '%s': %s" runtimeFileName errMsg)
+                    Link ->
+                        return ()
+
+                    File -> do
+                        let runtimeFileUrl = getJavaRuntimeRawFileUrl runtimeFile
+                            runtimeFileSha1 = getJavaRuntimeRawFileSha1 runtimeFile
+                            runtimeFileName = getJavaRuntimeFileName runtimeFile
+                            isRuntimeFileExecutable = isJavaRuntimeFileExecutable runtimeFile
+
+                        fileExists <- doesFileExist localRuntimeFilePath
+                        sha1Verification <- if fileExists
+                            then BS.readFile localRuntimeFilePath <&> ((== runtimeFileSha1) . stringHash)
+                            else return False
+
+                        unless (not fileExists || not sha1Verification) $
+                            incProgress progressBar 1
+
+                        when (not fileExists || not sha1Verification) $ do
+                            downloadFile localRuntimeFilePath runtimeFileUrl >>= \case
+                                Right () ->
+                                    incProgress progressBar 1
+
+                                Left errMsg ->
+                                    error (printf "Failed to download a runtime file '%s': %s" runtimeFileName errMsg)
+
+                            when (currentOSType /= Windows && isRuntimeFileExecutable) $
+                                execProcessEither "chmod" ["+x", localRuntimeFilePath] >>= \case
+                                    Right () ->
+                                        return ()
+
+                                    Left errMsg ->
+                                        error (printf "Failed to make a file executable: %s" errMsg)
+
+    let runtimeFileLinks = filter ((== Link) . getJavaRuntimeFileType) (getJavaRuntimeFiles runtime)
+
+    lift $ forConcurrently_ runtimeFileLinks $ \runtimeFileLink -> do
+        let localRuntimeFilePath = getLocalJavaRuntimeFilePath' runtimeFileLink
+            symlinkTarget = getJavaRuntimeFileSymlinkTarget runtimeFileLink
+            absSymlinkTarget = takeDirectory localRuntimeFilePath </> symlinkTarget
+
+        unlessM (doesFileExist localRuntimeFilePath) $
+            createFileLink absSymlinkTarget localRuntimeFilePath
+
+        incProgress progressBar 1
 
 prepareJavaRuntime :: HasCallStack => JavaRuntimeVariant -> AppStateT IO ()
 prepareJavaRuntime variant = do

@@ -1,4 +1,4 @@
-module System.Process.Extra
+module System.Process.Extra2
     ( readProcessEither
     , execProcessEither
     ) where

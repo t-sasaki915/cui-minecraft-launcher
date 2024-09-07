@@ -1,10 +1,12 @@
 module Data.JavaRuntime
-    ( JavaRuntime
+    ( FileType (..)
+    , JavaRuntime
     , getJavaRuntimeFiles
     , getJavaRuntimeFileName
     , isJavaRuntimeFileExecutable
-    , isJavaRuntimeFileDirectory
+    , getJavaRuntimeFileType
     , getLocalJavaRuntimeFilePath
+    , getJavaRuntimeFileSymlinkTarget
     , getJavaRuntimeRawFileUrl
     , getJavaRuntimeRawFileSha1
     , parseJavaRuntimeManifest
@@ -21,11 +23,12 @@ import           Data.Minecraft                       (MinecraftDir)
 import           System.FilePath                      ((</>))
 import           Text.Printf                          (printf)
 
-data FileType = File | Directory deriving (Show, Eq)
+data FileType = File | Directory | Link deriving (Show, Eq)
 
 instance FromJSON FileType where
     parseJSON (String "file")      = pure File
     parseJSON (String "directory") = pure Directory
+    parseJSON (String "link")      = pure Link
     parseJSON x = fail (printf "Invalid FileType structure: %s" (show x))
 
 data FileDownload = FileDownload
@@ -55,9 +58,10 @@ instance FromJSON FileDownloads where
     parseJSON x = fail (printf "Invalid FileDownloads structure: %s" (show x))
 
 data JavaRuntimeFile_ = JavaRuntimeFile_
-    { javaRuntimeFileDownloads__    :: Maybe FileDownloads
-    , isJavaRuntimeFileExecutable__ :: Maybe Bool
-    , javaRuntimeFileType__         :: FileType
+    { javaRuntimeFileDownloads__     :: Maybe FileDownloads
+    , isJavaRuntimeFileExecutable__  :: Maybe Bool
+    , javaRuntimeFileType__          :: FileType
+    , javaRuntimeFileSymlinkTarget__ :: Maybe FilePath
     }
     deriving Show
 
@@ -67,13 +71,15 @@ instance FromJSON JavaRuntimeFile_ where
             <$> (m .:? "downloads")
             <*> (m .:? "executable")
             <*> (m .:  "type")
+            <*> (m .:? "target")
     parseJSON x = fail (printf "Invalid JavaRuntimeFile structure: %s" (show x))
 
 data JavaRuntimeFile = JavaRuntimeFile
-    { javaRuntimeFileName_         :: String
-    , javaRuntimeFileDownloads_    :: Maybe FileDownloads
-    , isJavaRuntimeFileExecutable_ :: Maybe Bool
-    , javaRuntimeFileType_         :: FileType
+    { javaRuntimeFileName_          :: String
+    , javaRuntimeFileDownloads_     :: Maybe FileDownloads
+    , isJavaRuntimeFileExecutable_  :: Maybe Bool
+    , javaRuntimeFileType_          :: FileType
+    , javaRuntimeFileSymlinkTarget_ :: Maybe FilePath
     }
     deriving Show
 
@@ -102,13 +108,15 @@ getJavaRuntimeFileName = javaRuntimeFileName_
 isJavaRuntimeFileExecutable :: JavaRuntimeFile -> Bool
 isJavaRuntimeFileExecutable = fromMaybe False . isJavaRuntimeFileExecutable_
 
-isJavaRuntimeFileDirectory :: JavaRuntimeFile -> Bool
-isJavaRuntimeFileDirectory = (== Directory) . javaRuntimeFileType_
+getJavaRuntimeFileType :: JavaRuntimeFile -> FileType
+getJavaRuntimeFileType = javaRuntimeFileType_
 
 getLocalJavaRuntimeFilePath :: MinecraftDir -> JavaRuntimeVariant -> JavaRuntimeFile -> FilePath
 getLocalJavaRuntimeFilePath mcDir variant runtimeFile =
     mcDir </> "runtime" </> show variant </> getJavaRuntimeFileName runtimeFile
 
+getJavaRuntimeFileSymlinkTarget :: JavaRuntimeFile -> FilePath
+getJavaRuntimeFileSymlinkTarget = fromJust . javaRuntimeFileSymlinkTarget_
 
 getJavaRuntimeRawFileUrl :: JavaRuntimeFile -> String
 getJavaRuntimeRawFileUrl = fileDownloadUrl_ . rawFileDownload_ . fromJust . javaRuntimeFileDownloads_
@@ -127,10 +135,11 @@ parseJavaRuntimeManifest rawJson =
 
                             return $
                                 JavaRuntimeFile
-                                    { javaRuntimeFileName_         = toString key
-                                    , javaRuntimeFileDownloads_    = javaRuntimeFileDownloads__ obj
-                                    , isJavaRuntimeFileExecutable_ = isJavaRuntimeFileExecutable__ obj
-                                    , javaRuntimeFileType_         = javaRuntimeFileType__ obj
+                                    { javaRuntimeFileName_          = toString key
+                                    , javaRuntimeFileDownloads_     = javaRuntimeFileDownloads__ obj
+                                    , isJavaRuntimeFileExecutable_  = isJavaRuntimeFileExecutable__ obj
+                                    , javaRuntimeFileType_          = javaRuntimeFileType__ obj
+                                    , javaRuntimeFileSymlinkTarget_ = javaRuntimeFileSymlinkTarget__ obj
                                     }
                         )
             in
