@@ -22,28 +22,25 @@ module Data.Minecraft.ClientJson
     , filterArguments
     ) where
 
-import           Control.Monad                        (forM)
-import           Control.Monad.Trans.State            (execState, put)
+import           Control.Monad                    (forM)
+import           Control.Monad.Trans.State        (execState, put)
 import           Data.Aeson
-import           Data.ByteString                      (ByteString)
-import           Data.Functor                         ((<&>))
-import           Data.JavaRuntime.JavaRuntimeManifest (JavaRuntimeVariant (JreLegacy))
-import           Data.List.Extra                      (splitOn)
-import           Data.Maybe                           (fromJust, fromMaybe,
-                                                       maybeToList)
-import           Data.Minecraft                       (MinecraftDir)
-import           Data.Minecraft.VersionManifestV2     (MCVersion, MCVersionID,
-                                                       getMCVersionID)
-import           Data.Monoid.Extra                    (mwhen)
-import           Data.Text                            (unpack)
-import           System.FilePath                      ((</>))
-import           System.OS                            (OSType (..),
-                                                       currentOSType)
-import           System.OS.Arch                       (OSArch (X86),
-                                                       currentOSArch)
-import           System.OS.Version                    (OSVersion)
-import           Text.Printf                          (printf)
-import           Text.Regex.Posix                     ((=~))
+import           Data.ByteString                  (ByteString)
+import           Data.Functor                     ((<&>))
+import           Data.List.Extra                  (splitOn)
+import           Data.Maybe                       (fromJust, fromMaybe,
+                                                   maybeToList)
+import           Data.Minecraft                   (MinecraftDir)
+import           Data.Minecraft.VersionManifestV2 (MCVersion, MCVersionID,
+                                                   getMCVersionID)
+import           Data.Monoid.Extra                (mwhen)
+import           Data.Text                        (unpack)
+import           System.FilePath                  ((</>))
+import           System.OS                        (OSType (..), currentOSType)
+import           System.OS.Arch                   (OSArch (X86), currentOSArch)
+import           System.OS.Version                (OSVersion)
+import           Text.Printf                      (printf)
+import           Text.Regex.Posix                 ((=~))
 
 type AssetVersion = String
 type JavaClass    = String
@@ -180,7 +177,7 @@ instance FromJSON ClientDownloads where
     parseJSON x = fail (printf "Invalid ClientDownloads structure: %s" (show x))
 
 data JavaVersion = JavaVersion
-    { javaVersionComponent_ :: JavaRuntimeVariant
+    { javaVersionComponent_ :: String
     , javaMajorVersion_     :: Int
     }
     deriving Show
@@ -255,7 +252,7 @@ data ClientJson = ClientJson
     , clientAssetVersion_    :: AssetVersion
     , clientVersionId_       :: MCVersionID
     , clientDownloads_       :: ClientDownloads
-    , clientJavaVersion_     :: Maybe JavaVersion
+    , clientJavaVersion_     :: JavaVersion
     , clientLibraries_       :: [ClientLibrary]
     , clientMainClass_       :: JavaClass
     }
@@ -270,7 +267,7 @@ instance FromJSON ClientJson where
             <*> (m .:  "assets")
             <*> (m .:  "id")
             <*> (m .:  "downloads")
-            <*> (m .:? "javaVersion")
+            <*> (m .:  "javaVersion")
             <*> (m .:  "libraries")
             <*> (m .:  "mainClass")
     parseJSON x = fail (printf "Invalid ClientJson structure: %s" (show x))
@@ -325,8 +322,8 @@ getLocalClientJarPath mcDir clientJson =
     let clientVersion = getClientVersionID clientJson in
         mcDir </> "versions" </> clientVersion </> printf "%s.jar" clientVersion
 
-getJavaRuntimeVariant :: ClientJson -> JavaRuntimeVariant
-getJavaRuntimeVariant = maybe JreLegacy javaVersionComponent_ . clientJavaVersion_
+getJavaRuntimeVariant :: ClientJson -> String
+getJavaRuntimeVariant = javaVersionComponent_ . clientJavaVersion_
 
 getClientGameArguments :: ClientJson -> [ClientArgument]
 getClientGameArguments clientJson = case clientArguments_ clientJson of

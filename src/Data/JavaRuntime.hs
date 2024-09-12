@@ -13,15 +13,14 @@ module Data.JavaRuntime
     ) where
 
 import           Data.Aeson
-import           Data.Aeson.Key                       (toString)
-import qualified Data.Aeson.KeyMap                    as KM
-import           Data.Aeson.Types                     (parseEither)
-import           Data.ByteString                      (ByteString)
-import           Data.JavaRuntime.JavaRuntimeManifest (JavaRuntimeVariant)
-import           Data.Maybe                           (fromJust, fromMaybe)
-import           Data.Minecraft                       (MinecraftDir)
-import           System.FilePath                      ((</>))
-import           Text.Printf                          (printf)
+import           Data.Aeson.Key    (toString)
+import qualified Data.Aeson.KeyMap as KM
+import           Data.Aeson.Types  (parseEither)
+import           Data.ByteString   (ByteString)
+import           Data.Maybe        (fromJust, fromMaybe)
+import           Data.Minecraft    (MinecraftDir)
+import           System.FilePath   ((</>))
+import           Text.Printf       (printf)
 
 data FileType = File | Directory | Link deriving (Show, Eq)
 
@@ -111,9 +110,9 @@ isJavaRuntimeFileExecutable = fromMaybe False . isJavaRuntimeFileExecutable_
 getJavaRuntimeFileType :: JavaRuntimeFile -> FileType
 getJavaRuntimeFileType = javaRuntimeFileType_
 
-getLocalJavaRuntimeFilePath :: MinecraftDir -> JavaRuntimeVariant -> JavaRuntimeFile -> FilePath
+getLocalJavaRuntimeFilePath :: MinecraftDir -> String -> JavaRuntimeFile -> FilePath
 getLocalJavaRuntimeFilePath mcDir variant runtimeFile =
-    mcDir </> "runtime" </> show variant </> getJavaRuntimeFileName runtimeFile
+    mcDir </> "runtime" </> variant </> getJavaRuntimeFileName runtimeFile
 
 getJavaRuntimeFileSymlinkTarget :: JavaRuntimeFile -> FilePath
 getJavaRuntimeFileSymlinkTarget = fromJust . javaRuntimeFileSymlinkTarget_

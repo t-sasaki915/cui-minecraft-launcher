@@ -1,6 +1,9 @@
 module Data.JavaRuntime.JreManifest
     ( JreManifest
     , JavaRuntimeManifest
+    , getJreManifestUrl
+    , getLocalJreManifestPath
+    , getLocalJavaRuntimeManifestPath
     , parseJreManifest
     , getJavaRuntimeManifestId
     , getJavaRuntimeManifestSha1
@@ -8,14 +11,18 @@ module Data.JavaRuntime.JreManifest
     , getJavaRuntimeManifest
     ) where
 
-import           Control.Monad              (forM)
+import           Control.Monad.Extra        (concatForM)
 import           Control.Monad.Trans.Except (Except, except, runExcept)
 import           Data.Aeson
 import           Data.Aeson.Key             (toString)
 import qualified Data.Aeson.KeyMap          as KM
 import           Data.Aeson.Types           (parseEither)
 import           Data.ByteString            (ByteString)
+import           Data.Functor               ((<&>))
 import           Data.List                  (find)
+import           Data.Maybe                 (listToMaybe)
+import           Data.Minecraft             (MinecraftDir)
+import           System.FilePath            ((</>))
 import           System.OS                  (OSType (..), currentOSType)
 import           System.OS.Arch             (OSArch (..), currentOSArch)
 import           Text.Printf                (printf)
@@ -37,6 +44,17 @@ instance FromJSON JavaRuntimeManifest_ where
         JavaRuntimeManifest_
             <$> (m .: "sha1")
             <*> (m .: "url")
+    parseJSON x = fail (printf "Invalid JavaRuntimeManifest structure: %s" (show x))
+
+newtype JavaRuntimeManifest__ = JavaRuntimeManifest__
+    { javaRuntimeManifest_ :: JavaRuntimeManifest_
+    }
+    deriving Show
+
+instance FromJSON JavaRuntimeManifest__ where
+    parseJSON (Object m) =
+        JavaRuntimeManifest__
+            <$> (m .: "manifest")
     parseJSON x = fail (printf "Invalid JavaRuntimeManifest structure: %s" (show x))
 
 data JreManifest = JreManifest
@@ -72,6 +90,19 @@ instance FromJSON JreManifest_ where
             <*> (m .: "windows-x86")
     parseJSON x = fail (printf "Invalid JreManifest structure: %s" (show x))
 
+getJreManifestUrl :: String
+getJreManifestUrl =
+    "https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"
+
+getLocalJreManifestPath :: MinecraftDir -> FilePath
+getLocalJreManifestPath mcDir =
+    mcDir </> "versions" </> "jre_manifest.json"
+
+getLocalJavaRuntimeManifestPath :: MinecraftDir -> String -> FilePath
+getLocalJavaRuntimeManifestPath mcDir variant =
+    mcDir </> "runtime" </> printf "%s.json" variant
+
+
 parseJreManifest :: ByteString -> Either String JreManifest
 parseJreManifest rawJson =
     case eitherDecodeStrict' rawJson of
@@ -99,14 +130,19 @@ parseJreManifest rawJson =
             Left err
     where
         parse :: Object -> Except String [JavaRuntimeManifest]
-        parse obj = forM (KM.toList obj) $ \(key, val) -> do
-            parsed <- except (parseEither parseJSON val)
-            return $
-                JavaRuntimeManifest
-                    { javaRuntimeManifestId_   = toString key
-                    , javaRuntimeManifestSha1_ = javaRuntimeManifestSha1__ parsed
-                    , javaRuntimeManifestUrl_  = javaRuntimeManifestUrl__ parsed
-                    }
+        parse obj = concatForM (KM.toList obj) $ \(key, val) -> do
+            maybeParsed <- except (parseEither parseJSON val) <&> listToMaybe . map javaRuntimeManifest_
+            case maybeParsed of
+                Just parsed ->
+                    return
+                        [ JavaRuntimeManifest
+                            { javaRuntimeManifestId_  = toString key
+                            , javaRuntimeManifestSha1_ = javaRuntimeManifestSha1__ parsed
+                            , javaRuntimeManifestUrl_  = javaRuntimeManifestUrl__ parsed
+                            }
+                        ]
+                Nothing ->
+                    return []
 
 getJavaRuntimeManifestId :: JavaRuntimeManifest -> String
 getJavaRuntimeManifestId = javaRuntimeManifestId_
