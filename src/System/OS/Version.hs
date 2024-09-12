@@ -1,11 +1,11 @@
 module System.OS.Version (OSVersion, fetchOSVersion) where
 
-import           Data.Functor         ((<&>))
-import           GHC.Stack            (HasCallStack)
-import           System.OS            (OSType (..), currentOSType)
+import           Data.Functor          ((<&>))
+import           GHC.Stack             (HasCallStack)
+import           System.OS             (OSType (..), currentOSType)
 import           System.Process.Extra2 (readProcessEither)
-import           Text.Printf          (printf)
-import           Text.Regex.Posix     ((=~))
+import           Text.Printf           (printf)
+import           Text.Regex.Posix      ((=~))
 
 type OSVersion = String
 

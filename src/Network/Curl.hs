@@ -10,7 +10,7 @@ import           Data.ByteString.Internal (c2w)
 import           Data.Functor             ((<&>))
 import           Data.List.Extra          (dropEnd)
 import           System.OS                (OSType (..), currentOSType)
-import           System.Process.Extra2     (execProcessEither, readProcessEither)
+import           System.Process.Extra2    (execProcessEither, readProcessEither)
 
 type Url = String
 
