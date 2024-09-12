@@ -27,6 +27,7 @@ data LaunchContext = LaunchContext
     , quickPlayMultiPlayer  :: Maybe String
     , quickPlayRealms       :: Maybe String
     , gameDirectory         :: FilePath
+    , extraJvmOptions       :: [String]
     }
 
 getRuleContext :: LaunchContext -> AppStateT IO RuleContext
@@ -121,6 +122,18 @@ constructJvmArguments ruleContext clientJson = do
         , ("classpath"        , classpath)
         ]
 
+constructCommandLineArguments :: MCVersion -> LaunchContext -> ClientJson -> AppStateT IO [String]
+constructCommandLineArguments mcVersion launchCtx clientJson = do
+    ruleContext <- getRuleContext launchCtx
+
+    gameArguments <- constructGameArguments launchCtx mcVersion clientJson
+    jvmArguments  <- constructJvmArguments ruleContext clientJson
+
+    let mainClass = getClientMainClass clientJson
+        extraJvmArgs = extraJvmOptions launchCtx
+
+    return $ extraJvmArgs ++ jvmArguments ++ [mainClass] ++ gameArguments
+
 launchMinecraft :: HasCallStack => MCVersion -> LaunchContext -> AppStateT IO ()
 launchMinecraft mcVersion launchCtx = do
     ruleContext <- getRuleContext launchCtx
@@ -129,9 +142,7 @@ launchMinecraft mcVersion launchCtx = do
 
     clientJson <- readClientJson mcVersion
 
-    gameArguments <- constructGameArguments launchCtx mcVersion clientJson
-    jvmArguments  <- constructJvmArguments ruleContext clientJson
+    cmdArguments <- constructCommandLineArguments mcVersion launchCtx clientJson
 
-    lift (print jvmArguments)
-    lift (print gameArguments)
+    lift (print cmdArguments)
 

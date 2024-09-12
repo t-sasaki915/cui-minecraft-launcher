@@ -13,6 +13,7 @@ module Data.Minecraft.ClientJson
     , getLocalLibraryPath
     , getClientJarUrl
     , getClientJarSha1
+    , getClientMainClass
     , getLocalClientJarPath
     , getJavaRuntimeVariant
     , getClientGameArguments
@@ -316,6 +317,9 @@ getClientJarUrl = clientDownloadUrl_ . clientDownload_ . clientDownloads_
 
 getClientJarSha1 :: ClientJson -> String
 getClientJarSha1 = clientDownloadSha1_ . clientDownload_ . clientDownloads_
+
+getClientMainClass :: ClientJson -> String
+getClientMainClass = clientMainClass_
 
 getLocalClientJarPath :: MinecraftDir -> ClientJson -> String
 getLocalClientJarPath mcDir clientJson =

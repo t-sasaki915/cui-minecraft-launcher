@@ -11,6 +11,7 @@ import           Procedure.MinecraftLauncher      (LaunchContext (..),
 import           Control.Monad                    (unless)
 import           Control.Monad.Trans.Class        (lift)
 import           Data.List                        (find)
+import           Data.List.Extra                  (splitOn)
 import           Data.Maybe                       (isJust, isNothing)
 import           Data.Minecraft.VersionManifestV2
 import           GHC.Stack                        (HasCallStack)
@@ -23,6 +24,7 @@ data QuickLaunchCommand = QuickLaunchCommand
                             , width_         :: Maybe Int
                             , height_        :: Maybe Int
                             , gameDir_       :: FilePath
+                            , jvmOptions_    :: String
                             }
 
 instance Command QuickLaunchCommand where
@@ -71,6 +73,14 @@ quickLaunchCommandArgParser = do
                <> long "gamedir"
                <> short 'g'
                 )
+            <*> strOption
+                ( help "Use a custom jvm option."
+               <> value "-Xmx2G;-XX:+UnlockExperimentalVMOptions;-XX:+UseG1GC;-XX:G1NewSizePercent=20;-XX:G1ReservePercent=20;-XX:MaxGCPauseMillis=50;-XX:G1HeapRegionSize=32M"
+               <> showDefault
+               <> metavar "JVMOption"
+               <> long "jvm"
+               <> short 'j'
+                )
 
 quickLaunchCommandProcedure :: HasCallStack => QuickLaunchCommand -> AppStateT IO ()
 quickLaunchCommandProcedure opts = do
@@ -78,6 +88,7 @@ quickLaunchCommandProcedure opts = do
         width = width_ opts
         height = height_ opts
         gameDir = gameDir_ opts
+        jvmOptions = jvmOptions_ opts
 
     unless ((isJust width && isJust height) || (isNothing width && isNothing height)) $
         error "Please specify both '--width' and '--height' simultaneously."
@@ -97,6 +108,7 @@ quickLaunchCommandProcedure opts = do
                         , quickPlayMultiPlayer = Nothing
                         , quickPlayRealms = Nothing
                         , gameDirectory = gameDir
+                        , extraJvmOptions = splitOn ";" jvmOptions
                         }
 
             launchMinecraft mcVersion launchCtx
